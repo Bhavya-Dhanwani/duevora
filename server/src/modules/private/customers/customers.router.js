@@ -1,7 +1,7 @@
 // Importing modules
 import express from "express";
 import CustomersController from "./customers.controller.js";
-import { createCustomerValidators, listCustomersValidators, getCustomerValidators, updateCustomerValidators, bulkImportCustomerValidators } from "./customers.validator.js";
+import { createCustomerValidators, listCustomersValidators, getCustomerValidators, updateCustomerValidators, bulkImportCustomerValidators, bulkDeleteCustomersValidators } from "./customers.validator.js";
 import authMiddleware from "../../../shared/middlewares/auth.middleware.js";
 import permissionMiddleware from "../../../shared/middlewares/permission.middleware.js";
 
@@ -23,6 +23,20 @@ router.post("/", authMiddleware, permissionMiddleware("customers.create"), creat
 router.get("/", authMiddleware, permissionMiddleware("customers.view"), listCustomersValidators, controller.listCustomers);
 
 /*
+    @route POST /api/customers/bulk-import
+    @desc Bulk import customer profiles using transactions
+    @access Private (requires customers.create permission)
+*/
+router.post("/bulk-import", authMiddleware, permissionMiddleware("customers.create"), bulkImportCustomerValidators, controller.bulkImportCustomers);
+
+/*
+    @route DELETE /api/customers/bulk-delete
+    @desc Bulk soft delete customer profiles using transactions
+    @access Private (requires customers.delete permission)
+*/
+router.delete("/bulk-delete", authMiddleware, permissionMiddleware("customers.delete"), bulkDeleteCustomersValidators, controller.bulkDeleteCustomers);
+
+/*
     @route GET /api/customers/:customerId
     @desc Get customer details by ID
     @access Private (requires customers.view permission)
@@ -42,12 +56,5 @@ router.put("/:customerId", authMiddleware, permissionMiddleware("customers.updat
     @access Private (requires customers.delete permission)
 */
 router.delete("/:customerId", authMiddleware, permissionMiddleware("customers.delete"), getCustomerValidators, controller.deleteCustomer);
-
-/*
-    @route POST /api/customers/bulk-import
-    @desc Bulk import customer profiles using transactions
-    @access Private (requires customers.create permission)
-*/
-router.post("/bulk-import", authMiddleware, permissionMiddleware("customers.create"), bulkImportCustomerValidators, controller.bulkImportCustomers);
 
 export default router;

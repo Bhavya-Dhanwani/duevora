@@ -326,6 +326,62 @@ class CustomersController {
 
     }
 
+    // bulk soft delete customer profiles using replica transactions
+    bulkDeleteCustomers = async (req, res) => {
+
+        const { customerIds } = req.body;
+        const organizationId = req.user.organizationId;
+
+        // starting a mongodb transaction session
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+
+            for (const customerId of customerIds) {
+
+                // verifying target customer belongs to caller's organization context
+                const customer = await this.customerDao.findOne({
+                    _id: customerId,
+                    organizationId,
+                    isDeleted: {
+                        $ne: true
+                    }
+                }, session);
+
+                if (!customer) {
+
+                    throw new NotFound(`Customer profile with ID ${customerId} not found in your organization.`);
+
+                }
+
+                // soft deleting customer by setting isDeleted to true
+                await this.customerDao.updateById(customerId, {
+                    isDeleted: true
+                }, session);
+
+            }
+
+            // committing transaction
+            await session.commitTransaction();
+
+            return Ok(res, "Customers deleted successfully");
+
+        } catch (error) {
+
+            // aborting transaction on failure
+            await session.abortTransaction();
+            throw error;
+
+        } finally {
+
+            // ending session
+            session.endSession();
+
+        }
+
+    }
+
 }
 
 export default CustomersController;

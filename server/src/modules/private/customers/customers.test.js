@@ -595,4 +595,66 @@ describe("Customers Management Integration Tests", () => {
         });
     });
 
+    describe("DELETE /api/customers/bulk-delete", () => {
+        let c1, c2;
+
+        beforeEach(async () => {
+            c1 = await Customer.create({ name: "Bulk Del 1", organizationId: orgId });
+            c2 = await Customer.create({ name: "Bulk Del 2", organizationId: orgId });
+        });
+
+        it("should successfully soft delete multiple customers in transaction", async () => {
+            const res = await request(app)
+                .delete("/api/customers/bulk-delete")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    customerIds: [c1._id, c2._id]
+                });
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+
+            // Verify in DB that both are soft deleted
+            const dbC1 = await Customer.findById(c1._id);
+            expect(dbC1.isDeleted).toBe(true);
+
+            const dbC2 = await Customer.findById(c2._id);
+            expect(dbC2.isDeleted).toBe(true);
+        });
+
+        it("should roll back and delete nothing if any single customer ID doesn't exist", async () => {
+            const fakeId = new mongoose.Types.ObjectId();
+            const res = await request(app)
+                .delete("/api/customers/bulk-delete")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    customerIds: [c1._id, fakeId]
+                });
+
+            expect(res.status).toBe(404);
+
+            // Verify c1 was NOT soft-deleted
+            const dbC1 = await Customer.findById(c1._id);
+            expect(dbC1.isDeleted).toBe(false);
+        });
+
+        it("should roll back and delete nothing if a customer belongs to another organization", async () => {
+            const foreignOrg = await Organization.create({ name: "Foreign", code: "FRGN" });
+            const foreignCustomer = await Customer.create({ name: "Foreign Cust", organizationId: foreignOrg._id });
+
+            const res = await request(app)
+                .delete("/api/customers/bulk-delete")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    customerIds: [c1._id, foreignCustomer._id]
+                });
+
+            expect(res.status).toBe(404);
+
+            // Verify c1 was NOT soft-deleted
+            const dbC1 = await Customer.findById(c1._id);
+            expect(dbC1.isDeleted).toBe(false);
+        });
+    });
+
 });

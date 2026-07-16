@@ -172,4 +172,19 @@ const bulkImportCustomerValidators = [
     validateErrors
 ];
 
-export { createCustomerValidators, listCustomersValidators, getCustomerValidators, updateCustomerValidators, bulkImportCustomerValidators };
+const bulkDeleteCustomersValidators = [
+    // validating customerIds array
+    body("customerIds")
+        .isArray({ min: 1 })
+        .withMessage("customerIds must be a non-empty array"),
+
+    // validating individual customerId inside array
+    body("customerIds.*")
+        .custom((value) => mongoose.Types.ObjectId.isValid(value))
+        .withMessage("Invalid Customer ID"),
+
+    // validating errors
+    validateErrors
+];
+
+export { createCustomerValidators, listCustomersValidators, getCustomerValidators, updateCustomerValidators, bulkImportCustomerValidators, bulkDeleteCustomersValidators };
