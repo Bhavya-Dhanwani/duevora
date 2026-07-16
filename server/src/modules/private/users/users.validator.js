@@ -56,4 +56,16 @@ const updateUserValidators = [
     validateErrors
 ];
 
-export { listUsersValidators, updateUserValidators };
+const deleteUserValidators = [
+    // validating userId param
+    param("userId")
+        .notEmpty()
+        .withMessage("User ID is required")
+        .custom((value) => mongoose.Types.ObjectId.isValid(value))
+        .withMessage("Invalid User ID"),
+
+    // validating errors
+    validateErrors
+];
+
+export { listUsersValidators, updateUserValidators, deleteUserValidators };

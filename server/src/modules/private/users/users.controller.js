@@ -27,10 +27,13 @@ class UsersController {
         const employees = await this.employeeDao.find({ organizationId });
         const userIds = employees.map(emp => emp.userId?._id || emp.userId);
 
-        // formulating user filter
+        // formulating user filter and excluding soft deleted users
         const filter = {
             _id: {
                 $in: userIds
+            },
+            isDeleted: {
+                $ne: true
             }
         };
 
@@ -124,7 +127,7 @@ class UsersController {
         // finding the user using the user dao
         const user = await this.userDao.findUserById(userId);
 
-        if (!user) {
+        if (!user || user.isDeleted) {
 
             throw new NotFound("User not found.");
 
@@ -165,6 +168,46 @@ class UsersController {
         };
 
         return Ok(res, "User details updated successfully", sanitizedUser);
+
+    }
+
+    // soft delete user
+    deleteUser = async (req, res) => {
+
+        const { userId } = req.params;
+        const organizationId = req.user.organizationId;
+
+        // checking organization isolation: verify that the target userId belongs to the organization
+        const employee = await this.employeeDao.findOne({ userId, organizationId });
+
+        if (!employee) {
+
+            throw new NotFound("User not found in your organization.");
+
+        }
+
+        // finding the user using the user dao
+        const user = await this.userDao.findUserById(userId);
+
+        if (!user || user.isDeleted) {
+
+            throw new NotFound("User not found.");
+
+        }
+
+        // setting soft delete fields
+        user.isDeleted = true;
+        user.deletedAt = new Date();
+        user.deletedBy = req.user._id;
+
+        // saving the user to persist soft delete details
+        await user.save();
+
+        // deactivating their employee profile
+        employee.status = "inactive";
+        await employee.save();
+
+        return Ok(res, "User soft deleted successfully");
 
     }
 

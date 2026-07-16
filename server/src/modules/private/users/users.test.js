@@ -55,6 +55,13 @@ beforeEach(async () => {
         module: "users"
     });
 
+    // Seed permission for deleting users
+    await Permission.create({
+        name: "Delete Users",
+        code: "USERS.DELETE",
+        module: "users"
+    });
+
     // Create an Admin user
     const adminUser = await User.create({
         name: "Admin User",
@@ -111,7 +118,7 @@ beforeEach(async () => {
     userWithoutPermToken = normalLogin.body.data.accessToken;
 });
 
-describe("Users Management — List & Update Users Integration Tests", () => {
+describe("Users Management — List, Update & Delete Users Integration Tests", () => {
 
     describe("GET /api/users", () => {
         it("should list all users in the organization with pagination metadata", async () => {
@@ -144,6 +151,35 @@ describe("Users Management — List & Update Users Integration Tests", () => {
             expect(res.body.pagination).toBeDefined();
             expect(res.body.pagination.total).toBe(3);
             expect(res.body.pagination.pages).toBe(1);
+        });
+
+        it("should filter out soft deleted users from list", async () => {
+            const user3 = await User.create({
+                name: "Developer Bob",
+                email: "bob@example.com",
+                password: "password123",
+                isVerified: true,
+                isDeleted: true
+            });
+
+            await Employee.create({
+                userId: user3._id,
+                organizationId: orgId,
+                employeeCode: "EMP-003",
+                firstName: "Developer",
+                lastName: "Bob",
+                email: "bob@example.com",
+                status: "inactive"
+            });
+
+            const res = await request(app)
+                .get("/api/users")
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            // should only contain admin & normal, not bob
+            expect(res.body.data.length).toBe(2);
+            expect(res.body.data.map(u => u.email)).not.toContain("bob@example.com");
         });
 
         it("should filter users by search keyword", async () => {
@@ -273,6 +309,56 @@ describe("Users Management — List & Update Users Integration Tests", () => {
                 .send({
                     name: "Attempt Update"
                 });
+
+            expect(res.status).toBe(404);
+        });
+    });
+
+    describe("DELETE /api/users/:userId", () => {
+        it("should successfully soft delete user profile and deactivate employee status", async () => {
+            const res = await request(app)
+                .delete(`/api/users/${normalUserId}`)
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+
+            // Verify User in DB is soft deleted
+            const dbUser = await User.findById(normalUserId);
+            expect(dbUser.isDeleted).toBe(true);
+            expect(dbUser.deletedAt).toBeDefined();
+            expect(dbUser.deletedBy).toBeDefined();
+
+            // Verify Employee status is set to inactive
+            const dbEmployee = await Employee.findOne({ userId: normalUserId });
+            expect(dbEmployee.status).toBe("inactive");
+        });
+
+        it("should return forbidden if user does not have USERS.DELETE permission", async () => {
+            const res = await request(app)
+                .delete(`/api/users/${normalUserId}`)
+                .set("Authorization", `Bearer ${userWithoutPermToken}`);
+
+            expect(res.status).toBe(403);
+        });
+
+        it("should return not found if target userId is from another organization", async () => {
+            // Seed a foreign user
+            const foreignOrg = await Organization.create({ name: "Foreign", code: "FRGN" });
+            const foreignUser = await User.create({ name: "Foreign User", email: "foreign@example.com", password: "password123" });
+            await Employee.create({
+                userId: foreignUser._id,
+                organizationId: foreignOrg._id,
+                employeeCode: "FEMP-01",
+                firstName: "Foreign",
+                lastName: "User",
+                email: "foreign@example.com",
+                status: "active"
+            });
+
+            const res = await request(app)
+                .delete(`/api/users/${foreignUser._id}`)
+                .set("Authorization", `Bearer ${adminUserToken}`);
 
             expect(res.status).toBe(404);
         });
