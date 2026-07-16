@@ -12,13 +12,23 @@ const tokenSchema = new mongoose.Schema({
     type: {
         type: String,
         required: true,
-        enum: ['otp', 'reset']
+        enum: ['otp', 'reset', 'invitation']
     },
 
     value: {
         type: String,
         required: true,
         unique: true
+    },
+
+    roleId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Role'
+    },
+
+    organizationId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Organization'
     },
 
     expiresAt: {

@@ -3,6 +3,8 @@
 import UserDao from "../../../shared/dao/user.dao.js";
 import SessionDao from "../../../shared/dao/session.dao.js";
 import TokenDao from "../../../shared/dao/token.dao.js";
+import EmployeeDao from "../../../shared/dao/employee.dao.js";
+import EmployeeRoleDao from "../../../shared/dao/employeeRole.dao.js";
 
 import { COOKIE_EXPIRY_TIME, REFRESH_TOKEN_COOKIE_OPTIONS, OTP_EXPIRY_TIME, RESET_PASSWORD_TOKEN_EXPIRY_TIME } from "../../../shared/constants/tokens.constants.js";
 
@@ -43,34 +45,100 @@ class AuthController {
     signup = async (req, res) => {
 
         // getting the user from the request body
-        const { name, email, password } = req.body;
+        const { name, email, password, token } = req.body;
+
+        let tokenDoc = null;
+        if (token) {
+
+            // finding the invitation token in the database
+            tokenDoc = await this.tokenDao.findTokenByValue(token);
+
+            if (!tokenDoc || tokenDoc.type !== "invitation") {
+
+                throw new BadRequest("Invalid or expired invitation token.");
+
+            }
+
+            if (tokenDoc.email !== email) {
+
+                throw new BadRequest("Email does not match invitation.");
+
+            }
+
+        }
 
         // creating a new user using the user dao
         const user = await this.userDao.createUser({
             name,
             email,
             password,
-            providers: ["local"]
+            providers: ["local"],
+            isVerified: token ? true : false
         });
+
+        let employee = null;
+        if (tokenDoc) {
+
+            // initializing employee and employee role daos
+            const employeeDao = new EmployeeDao();
+            const employeeRoleDao = new EmployeeRoleDao();
+
+            // finding existing employees to calculate the new code
+            const existingEmployees = await employeeDao.find({ organizationId: tokenDoc.organizationId });
+            const count = existingEmployees.length;
+
+            // splitting full name into first and last name
+            const nameParts = name.trim().split(/\s+/);
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(" ") || firstName;
+
+            // creating employee profile using the employee dao
+            employee = await employeeDao.create({
+                userId: user._id,
+                organizationId: tokenDoc.organizationId,
+                employeeCode: `EMP-${count + 1}`,
+                firstName,
+                lastName,
+                email: user.email,
+                status: "active"
+            });
+
+            // assigning role to employee
+            await employeeRoleDao.create({
+                employeeId: employee._id,
+                roleId: tokenDoc.roleId
+            });
+
+            // deleting the invitation token
+            await this.tokenDao.deleteTokenByValue(token);
+
+        }
 
         // creating session and tokens
         const { sanitizedUser, accessToken } = await createSession(user, res, this.sessionDao);
 
-        // generate the otp to verify the user email
-        const otp = generateOTPToken();
+        if (!tokenDoc) {
 
-        // setting otp in the database using the token dao
-        await this.tokenDao.createToken({
-            email: user.email,
-            type: "otp",
-            value: otp,
-            expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME)
-        });
+            // generate the otp to verify the user email
+            const otp = generateOTPToken();
 
-        sendMail(user.email, "Verify your email", `Your OTP is ${otp}. It will expire in ${OTP_EXPIRY_TIME / 60000} minutes.`);
+            // setting otp in the database using the token dao
+            await this.tokenDao.createToken({
+                email: user.email,
+                type: "otp",
+                value: otp,
+                expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME)
+            });
 
-        // sending response with access token
-        return Created(res, "Otp Sent Successfully for verification", { user: sanitizedUser, accessToken: accessToken });
+            sendMail(user.email, "Verify your email", `Your OTP is ${otp}. It will expire in ${OTP_EXPIRY_TIME / 60000} minutes.`);
+
+            // sending response with access token
+            return Created(res, "Otp Sent Successfully for verification", { user: sanitizedUser, accessToken: accessToken });
+
+        }
+
+        // if signing up with token, return user, employee and accessToken
+        return Created(res, "User registered successfully via invitation", { user: sanitizedUser, employee, accessToken: accessToken });
 
     }
 
