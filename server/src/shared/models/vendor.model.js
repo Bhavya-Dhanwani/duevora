@@ -42,6 +42,11 @@ const vendorSchema = new mongoose.Schema({
         type: String,
         enum: ["active", "inactive"],
         default: "active",
+    },
+
+    isDeleted: {
+        type: Boolean,
+        default: false,
     }
 
 }, {
