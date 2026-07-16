@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the ledger entry model
 // defining the schema for the ledger entry model
 const ledgerEntrySchema = new mongoose.Schema({
 

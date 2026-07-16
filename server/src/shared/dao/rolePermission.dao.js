@@ -53,7 +53,7 @@ class RolePermissionDao {
 
         // updating a role permission by id using the role permission model and returning the updated role permission
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("roleId permissionId");

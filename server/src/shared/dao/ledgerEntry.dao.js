@@ -53,7 +53,7 @@ class LedgerEntryDao {
 
         // updating a ledger entry by id using the ledger entry model and returning the updated ledger entry
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId accountId journalEntryId");

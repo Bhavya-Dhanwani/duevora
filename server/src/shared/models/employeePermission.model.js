@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the employee permission model
 // defining the schema for the employee permission model
 const employeePermissionSchema = new mongoose.Schema({
 

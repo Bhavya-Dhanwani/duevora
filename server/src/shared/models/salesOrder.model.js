@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the sales order model
 // defining the schema for the sales order model
 const salesOrderSchema = new mongoose.Schema({
 

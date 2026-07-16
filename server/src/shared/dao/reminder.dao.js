@@ -53,7 +53,7 @@ class ReminderDao {
 
         // updating a reminder by id using the reminder model and returning the updated reminder
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId invoiceId paymentId");

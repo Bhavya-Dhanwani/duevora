@@ -53,7 +53,7 @@ class JournalEntryLineDao {
 
         // updating a journal entry line by id using the journal entry line model and returning the updated journal entry line
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("journalEntryId accountId");

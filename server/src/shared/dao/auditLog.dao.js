@@ -53,7 +53,7 @@ class AuditLogDao {
 
         // updating a audit log by id using the audit log model and returning the updated audit log
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId userId");

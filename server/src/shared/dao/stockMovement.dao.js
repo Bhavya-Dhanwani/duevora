@@ -53,7 +53,7 @@ class StockMovementDao {
 
         // updating a stock movement by id using the stock movement model and returning the updated stock movement
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId productId warehouseId");

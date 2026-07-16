@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the payment model
 // defining the schema for the payment model
 const paymentSchema = new mongoose.Schema({
 

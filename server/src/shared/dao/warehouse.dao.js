@@ -53,7 +53,7 @@ class WarehouseDao {
 
         // updating a warehouse by id using the warehouse model and returning the updated warehouse
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId");

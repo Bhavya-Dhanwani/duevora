@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the account model
 // defining the schema for the account model
 const accountSchema = new mongoose.Schema({
 

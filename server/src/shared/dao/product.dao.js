@@ -53,7 +53,7 @@ class ProductDao {
 
         // updating a product by id using the product model and returning the updated product
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId categoryId unitId");

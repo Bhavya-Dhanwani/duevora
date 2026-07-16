@@ -53,7 +53,7 @@ class CostCenterDao {
 
         // updating a cost center by id using the cost center model and returning the updated cost center
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId");

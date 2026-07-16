@@ -53,7 +53,7 @@ class ReceiptDao {
 
         // updating a receipt by id using the receipt model and returning the updated receipt
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId customerId invoiceId accountId");

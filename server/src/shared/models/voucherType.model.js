@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the voucher type model
 // defining the schema for the voucher type model
 const voucherTypeSchema = new mongoose.Schema({
 

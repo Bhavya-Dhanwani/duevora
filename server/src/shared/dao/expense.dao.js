@@ -53,7 +53,7 @@ class ExpenseDao {
 
         // updating a expense by id using the expense model and returning the updated expense
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId categoryId accountId");

@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the employee role model
 // defining the schema for the employee role model
 const employeeRoleSchema = new mongoose.Schema({
 

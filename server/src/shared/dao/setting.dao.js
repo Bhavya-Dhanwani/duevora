@@ -53,7 +53,7 @@ class SettingDao {
 
         // updating a setting by id using the setting model and returning the updated setting
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId");

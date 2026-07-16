@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the invoice item model
 // defining the schema for the invoice item model
 const invoiceItemSchema = new mongoose.Schema({
 

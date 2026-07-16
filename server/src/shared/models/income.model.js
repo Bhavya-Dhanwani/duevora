@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the income model
 // defining the schema for the income model
 const incomeSchema = new mongoose.Schema({
 

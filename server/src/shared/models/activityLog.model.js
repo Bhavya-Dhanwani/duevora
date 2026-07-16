@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the activity log model
 // defining the schema for the activity log model
 const activityLogSchema = new mongoose.Schema({
 

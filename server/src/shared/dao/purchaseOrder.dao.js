@@ -53,7 +53,7 @@ class PurchaseOrderDao {
 
         // updating a purchase order by id using the purchase order model and returning the updated purchase order
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId vendorId");

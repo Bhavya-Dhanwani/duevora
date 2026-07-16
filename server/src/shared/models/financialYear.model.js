@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the financial year model
 // defining the schema for the financial year model
 const financialYearSchema = new mongoose.Schema({
 

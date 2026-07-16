@@ -53,7 +53,7 @@ class InventoryDao {
 
         // updating a inventory by id using the inventory model and returning the updated inventory
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId productId warehouseId");

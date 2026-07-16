@@ -53,7 +53,7 @@ class AttachmentDao {
 
         // updating a attachment by id using the attachment model and returning the updated attachment
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId uploadedBy");

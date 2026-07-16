@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the expense model
 // defining the schema for the expense model
 const expenseSchema = new mongoose.Schema({
 

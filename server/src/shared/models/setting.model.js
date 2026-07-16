@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the setting model
 // defining the schema for the setting model
 const settingSchema = new mongoose.Schema({
 

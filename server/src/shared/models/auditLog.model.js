@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the audit log model
 // defining the schema for the audit log model
 const auditLogSchema = new mongoose.Schema({
 

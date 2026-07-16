@@ -53,7 +53,7 @@ class VendorDao {
 
         // updating a vendor by id using the vendor model and returning the updated vendor
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId");

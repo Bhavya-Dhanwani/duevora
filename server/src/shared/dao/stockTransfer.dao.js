@@ -53,7 +53,7 @@ class StockTransferDao {
 
         // updating a stock transfer by id using the stock transfer model and returning the updated stock transfer
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId fromWarehouseId toWarehouseId productId");

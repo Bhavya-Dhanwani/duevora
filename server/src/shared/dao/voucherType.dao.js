@@ -53,7 +53,7 @@ class VoucherTypeDao {
 
         // updating a voucher type by id using the voucher type model and returning the updated voucher type
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId");

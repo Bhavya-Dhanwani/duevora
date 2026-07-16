@@ -53,7 +53,7 @@ class TaxDao {
 
         // updating a tax by id using the tax model and returning the updated tax
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId");

@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the department model
 // defining the schema for the department model
 const departmentSchema = new mongoose.Schema({
 

@@ -53,7 +53,7 @@ class UnitDao {
 
         // updating a unit by id using the unit model and returning the updated unit
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId");

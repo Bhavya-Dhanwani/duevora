@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the warehouse model
 // defining the schema for the warehouse model
 const warehouseSchema = new mongoose.Schema({
 

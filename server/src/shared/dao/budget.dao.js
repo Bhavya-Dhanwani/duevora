@@ -53,7 +53,7 @@ class BudgetDao {
 
         // updating a budget by id using the budget model and returning the updated budget
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId financialYearId accountId");

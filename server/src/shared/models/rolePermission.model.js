@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the role permission model
 // defining the schema for the role permission model
 const rolePermissionSchema = new mongoose.Schema({
 

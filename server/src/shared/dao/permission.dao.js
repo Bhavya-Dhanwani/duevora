@@ -53,7 +53,7 @@ class PermissionDao {
 
         // updating a permission by id using the permission model and returning the updated permission
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         });

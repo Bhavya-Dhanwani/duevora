@@ -53,7 +53,7 @@ class IncomeDao {
 
         // updating a income by id using the income model and returning the updated income
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId categoryId accountId");

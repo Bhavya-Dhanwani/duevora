@@ -53,7 +53,7 @@ class StockAdjustmentDao {
 
         // updating a stock adjustment by id using the stock adjustment model and returning the updated stock adjustment
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId warehouseId productId adjustedById");

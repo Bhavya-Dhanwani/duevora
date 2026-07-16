@@ -53,7 +53,7 @@ class EmployeePermissionDao {
 
         // updating a employee permission by id using the employee permission model and returning the updated employee permission
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("employeeId permissionId");

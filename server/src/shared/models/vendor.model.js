@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the vendor model
 // defining the schema for the vendor model
 const vendorSchema = new mongoose.Schema({
 

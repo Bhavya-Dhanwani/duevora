@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the stock adjustment model
 // defining the schema for the stock adjustment model
 const stockAdjustmentSchema = new mongoose.Schema({
 

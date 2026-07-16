@@ -53,7 +53,7 @@ class CategoryDao {
 
         // updating a category by id using the category model and returning the updated category
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId parentId");

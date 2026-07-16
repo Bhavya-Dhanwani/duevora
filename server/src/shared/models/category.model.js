@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the category model
 // defining the schema for the category model
 const categorySchema = new mongoose.Schema({
 

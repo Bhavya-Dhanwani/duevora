@@ -53,7 +53,7 @@ class ActivityLogDao {
 
         // updating a activity log by id using the activity log model and returning the updated activity log
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId userId");

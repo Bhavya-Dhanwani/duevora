@@ -53,7 +53,7 @@ class DocumentDao {
 
         // updating a document by id using the document model and returning the updated document
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId generatedBy");

@@ -53,7 +53,7 @@ class ExchangeRateDao {
 
         // updating a exchange rate by id using the exchange rate model and returning the updated exchange rate
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId currencyId");

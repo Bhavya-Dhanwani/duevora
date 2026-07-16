@@ -53,7 +53,7 @@ class BankTransactionDao {
 
         // updating a bank transaction by id using the bank transaction model and returning the updated bank transaction
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId bankAccountId");

@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the inventory model
 // defining the schema for the inventory model
 const inventorySchema = new mongoose.Schema({
 

@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the receipt model
 // defining the schema for the receipt model
 const receiptSchema = new mongoose.Schema({
 

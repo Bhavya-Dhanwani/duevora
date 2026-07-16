@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the stock movement model
 // defining the schema for the stock movement model
 const stockMovementSchema = new mongoose.Schema({
 

@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the purchase item model
 // defining the schema for the purchase item model
 const purchaseItemSchema = new mongoose.Schema({
 

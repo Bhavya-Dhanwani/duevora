@@ -53,7 +53,7 @@ class BankAccountDao {
 
         // updating a bank account by id using the bank account model and returning the updated bank account
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId accountId");

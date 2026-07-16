@@ -53,7 +53,7 @@ class OrganizationDao {
 
         // updating a organization by id using the organization model and returning the updated organization
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         });

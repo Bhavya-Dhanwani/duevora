@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the stock transfer model
 // defining the schema for the stock transfer model
 const stockTransferSchema = new mongoose.Schema({
 

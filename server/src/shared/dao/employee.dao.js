@@ -53,7 +53,7 @@ class EmployeeDao {
 
         // updating a employee by id using the employee model and returning the updated employee
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("userId organizationId departmentId");

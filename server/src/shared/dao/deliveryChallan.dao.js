@@ -53,7 +53,7 @@ class DeliveryChallanDao {
 
         // updating a delivery challan by id using the delivery challan model and returning the updated delivery challan
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId customerId");

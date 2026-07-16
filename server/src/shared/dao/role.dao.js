@@ -53,7 +53,7 @@ class RoleDao {
 
         // updating a role by id using the role model and returning the updated role
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId");

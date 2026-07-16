@@ -53,7 +53,7 @@ class InvoiceDao {
 
         // updating a invoice by id using the invoice model and returning the updated invoice
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId customerId");

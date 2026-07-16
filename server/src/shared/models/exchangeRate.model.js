@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the exchange rate model
 // defining the schema for the exchange rate model
 const exchangeRateSchema = new mongoose.Schema({
 

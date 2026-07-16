@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the bank transaction model
 // defining the schema for the bank transaction model
 const bankTransactionSchema = new mongoose.Schema({
 

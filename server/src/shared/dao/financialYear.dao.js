@@ -53,7 +53,7 @@ class FinancialYearDao {
 
         // updating a financial year by id using the financial year model and returning the updated financial year
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId");

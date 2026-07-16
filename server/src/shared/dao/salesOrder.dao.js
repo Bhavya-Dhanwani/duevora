@@ -53,7 +53,7 @@ class SalesOrderDao {
 
         // updating a sales order by id using the sales order model and returning the updated sales order
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId customerId");

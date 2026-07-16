@@ -53,7 +53,7 @@ class CustomerDao {
 
         // updating a customer by id using the customer model and returning the updated customer
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId");

@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the reminder model
 // defining the schema for the reminder model
 const reminderSchema = new mongoose.Schema({
 

@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the delivery challan model
 // defining the schema for the delivery challan model
 const deliveryChallanSchema = new mongoose.Schema({
 

@@ -53,7 +53,7 @@ class JournalEntryDao {
 
         // updating a journal entry by id using the journal entry model and returning the updated journal entry
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId");

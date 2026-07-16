@@ -53,7 +53,7 @@ class CurrencyDao {
 
         // updating a currency by id using the currency model and returning the updated currency
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId");

@@ -1,6 +1,9 @@
 // Importing module
 import mongoose from "mongoose";
 
+// Importing module
+
+// defining the schema for the tax model
 // defining the schema for the tax model
 const taxSchema = new mongoose.Schema({
 

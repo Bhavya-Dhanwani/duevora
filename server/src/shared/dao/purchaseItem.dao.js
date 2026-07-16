@@ -53,7 +53,7 @@ class PurchaseItemDao {
 
         // updating a purchase item by id using the purchase item model and returning the updated purchase item
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("purchaseId productId taxId");

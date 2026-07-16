@@ -53,7 +53,7 @@ class PaymentDao {
 
         // updating a payment by id using the payment model and returning the updated payment
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId vendorId purchaseId accountId");

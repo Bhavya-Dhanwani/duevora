@@ -53,7 +53,7 @@ class ProjectDao {
 
         // updating a project by id using the project model and returning the updated project
         return await this.Model.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: "after",
             runValidators: true,
             session
         }).populate("organizationId customerId");
