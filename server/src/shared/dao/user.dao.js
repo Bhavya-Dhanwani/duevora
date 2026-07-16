@@ -48,6 +48,20 @@ class UserDao {
 
     }
 
+    // function to find users matching filter
+    async find(filter = {}, options = {}, session = null) {
+        let query = this.UserModel.find(filter).session(session);
+        if (options.sort) query = query.sort(options.sort);
+        if (options.limit) query = query.limit(options.limit);
+        if (options.skip) query = query.skip(options.skip);
+        return await query;
+    }
+
+    // function to delete a user by id
+    async deleteUserById(id, session = null) {
+        return await this.UserModel.findByIdAndDelete(id, { session });
+    }
+
 }
 
 export default UserDao;
