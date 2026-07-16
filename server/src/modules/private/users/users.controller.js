@@ -1,6 +1,9 @@
 // Importing modules
 import UserDao from "../../../shared/dao/user.dao.js";
 import EmployeeDao from "../../../shared/dao/employee.dao.js";
+import Conflict from "../../../shared/errors/Conflict.error.js";
+import NotFound from "../../../shared/errors/NotFound.error.js";
+import Ok from "../../../shared/responses/Ok.response.js";
 
 // class to handle users operations
 class UsersController {
@@ -86,6 +89,82 @@ class UsersController {
                 pages
             }
         });
+
+    }
+
+    // update user details
+    updateUser = async (req, res) => {
+
+        const { userId } = req.params;
+        const { name, email, password } = req.body;
+        const organizationId = req.user.organizationId;
+
+        // checking organization isolation: verify that the target userId belongs to the organization
+        const employee = await this.employeeDao.findOne({ userId, organizationId });
+        
+        if (!employee) {
+
+            throw new NotFound("User not found in your organization.");
+
+        }
+
+        // checking if email is being updated and if it is already in use by another user
+        if (email) {
+
+            const existingEmailUser = await this.userDao.findUserByEmail(email);
+
+            if (existingEmailUser && existingEmailUser._id.toString() !== userId) {
+
+                throw new Conflict("Email already in use.");
+
+            }
+
+        }
+
+        // finding the user using the user dao
+        const user = await this.userDao.findUserById(userId);
+
+        if (!user) {
+
+            throw new NotFound("User not found.");
+
+        }
+
+        // updating fields if provided
+        if (name) {
+
+            user.name = name;
+
+        }
+
+        if (email) {
+
+            user.email = email;
+
+            // updating the email in the employee record as well to keep them in sync
+            employee.email = email;
+            await employee.save();
+
+        }
+
+        if (password) {
+
+            user.password = password;
+
+        }
+
+        // saving the updated user to trigger pre-save hashing hooks
+        await user.save();
+
+        // sanitizing the updated user object
+        const sanitizedUser = {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            isVerified: user.isVerified
+        };
+
+        return Ok(res, "User details updated successfully", sanitizedUser);
 
     }
 

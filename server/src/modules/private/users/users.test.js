@@ -21,6 +21,7 @@ let app;
 let orgId;
 let adminUserToken;
 let userWithoutPermToken;
+let normalUserId;
 
 beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -41,9 +42,16 @@ beforeEach(async () => {
     }
 
     // Seed permission for listing users
-    const viewUsersPerm = await Permission.create({
+    await Permission.create({
         name: "View Users",
         code: "USERS.VIEW",
+        module: "users"
+    });
+
+    // Seed permission for updating users
+    await Permission.create({
+        name: "Update Users",
+        code: "USERS.UPDATE",
         module: "users"
     });
 
@@ -83,6 +91,8 @@ beforeEach(async () => {
         isVerified: true
     });
 
+    normalUserId = normalUser._id;
+
     // Add this user as employee without USERS.VIEW permission (no roles assigned to them)
     await Employee.create({
         userId: normalUser._id,
@@ -101,7 +111,7 @@ beforeEach(async () => {
     userWithoutPermToken = normalLogin.body.data.accessToken;
 });
 
-describe("Users Management — List Users Integration Tests", () => {
+describe("Users Management — List & Update Users Integration Tests", () => {
 
     describe("GET /api/users", () => {
         it("should list all users in the organization with pagination metadata", async () => {
@@ -171,7 +181,6 @@ describe("Users Management — List Users Integration Tests", () => {
                 .query({ sortBy: "name", sortOrder: "desc" });
 
             expect(res.status).toBe(200);
-            // "Normal User" should come before "Admin User" in descending order
             expect(res.body.data[0].name).toBe("Normal User");
             expect(res.body.data[1].name).toBe("Admin User");
         });
@@ -184,12 +193,88 @@ describe("Users Management — List Users Integration Tests", () => {
             expect(res.status).toBe(403);
             expect(res.body.success).toBe(false);
         });
+    });
 
-        it("should return unauthorized if access token is missing", async () => {
+    describe("PUT /api/users/:userId", () => {
+        it("should successfully update user profile details and sync employee record", async () => {
             const res = await request(app)
-                .get("/api/users");
+                .put(`/api/users/${normalUserId}`)
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    name: "Updated Normal Name",
+                    email: "updatednormal@example.com"
+                });
 
-            expect(res.status).toBe(401);
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.name).toBe("Updated Normal Name");
+            expect(res.body.data.email).toBe("updatednormal@example.com");
+
+            // Verify User in DB is updated
+            const dbUser = await User.findById(normalUserId);
+            expect(dbUser.name).toBe("Updated Normal Name");
+            expect(dbUser.email).toBe("updatednormal@example.com");
+
+            // Verify Employee record email is synced
+            const dbEmployee = await Employee.findOne({ userId: normalUserId });
+            expect(dbEmployee.email).toBe("updatednormal@example.com");
+        });
+
+        it("should fail validation if password is too short", async () => {
+            const res = await request(app)
+                .put(`/api/users/${normalUserId}`)
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    password: "123" // less than 6 characters
+                });
+
+            expect(res.status).toBe(400);
+        });
+
+        it("should return conflict if email is already in use by another user", async () => {
+            const res = await request(app)
+                .put(`/api/users/${normalUserId}`)
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    email: "admin@example.com" // already in use by adminUser
+                });
+
+            expect(res.status).toBe(409);
+        });
+
+        it("should return forbidden if user does not have USERS.UPDATE permission", async () => {
+            const res = await request(app)
+                .put(`/api/users/${normalUserId}`)
+                .set("Authorization", `Bearer ${userWithoutPermToken}`)
+                .send({
+                    name: "Hacker Attempt"
+                });
+
+            expect(res.status).toBe(403);
+        });
+
+        it("should return not found if target userId is from another organization", async () => {
+            // Seed a foreign user
+            const foreignOrg = await Organization.create({ name: "Foreign", code: "FRGN" });
+            const foreignUser = await User.create({ name: "Foreign User", email: "foreign@example.com", password: "password123" });
+            await Employee.create({
+                userId: foreignUser._id,
+                organizationId: foreignOrg._id,
+                employeeCode: "FEMP-01",
+                firstName: "Foreign",
+                lastName: "User",
+                email: "foreign@example.com",
+                status: "active"
+            });
+
+            const res = await request(app)
+                .put(`/api/users/${foreignUser._id}`)
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    name: "Attempt Update"
+                });
+
+            expect(res.status).toBe(404);
         });
     });
 
