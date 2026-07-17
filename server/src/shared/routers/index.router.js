@@ -14,6 +14,7 @@ import productsRouter from "../../modules/private/products/products.router.js";
 import warehousesRouter from "../../modules/private/warehouses/warehouses.router.js";
 import currenciesRouter from "../../modules/private/currencies/currencies.router.js";
 import exchangeRatesRouter from "../../modules/private/exchangeRates/exchangeRates.router.js";
+import inventoryRouter from "../../modules/private/inventory/inventory.router.js";
 
 // making the router
 const router = express.Router();
@@ -33,6 +34,7 @@ router.use("/products", productsRouter);
 router.use("/warehouses", warehousesRouter);
 router.use("/currencies", currenciesRouter);
 router.use("/exchange-rates", exchangeRatesRouter);
+router.use("/inventory", inventoryRouter);
 
 // exporting the router
 export default router;
