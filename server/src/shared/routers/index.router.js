@@ -46,11 +46,13 @@ import auditLogsRouter from "../../modules/private/auditLogs/auditLogs.router.js
 import settingsRouter from "../../modules/private/settings/settings.router.js";
 import reportsRouter from "../../modules/private/reports/reports.router.js";
 import contactRouter from "../../modules/public/contact/contact.router.js";
+import healthRouter from "./health.router.js";
 
 // making the router
 const router = express.Router();
 
 // mounting the public routers
+router.use("/health", healthRouter);
 router.use("/auth", authRouter);
 router.use("/contact", contactRouter);
 router.use("/organization", organizationRouter);
