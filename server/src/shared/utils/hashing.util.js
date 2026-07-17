@@ -1,11 +1,14 @@
 // Importing modules
 import bcrypt from "bcryptjs";
 
+// salt rounds — use BCRYPT_ROUNDS=1 in .env.test for fast tests, keep 10+ in production
+const SALT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS ?? "10", 10);
+
 // function to hash the password
 async function hashPassword(password) {
 
     // hashing the password using bcrypt
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
     // returning the hashed password
     return hashedPassword;

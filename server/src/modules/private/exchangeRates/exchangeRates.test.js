@@ -1,4 +1,5 @@
 import { jest } from "@jest/globals";
+jest.setTimeout(20000);
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import request from "supertest";
