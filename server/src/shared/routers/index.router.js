@@ -32,6 +32,15 @@ import accountsRouter from "../../modules/private/accounts/accounts.router.js";
 import journalEntriesRouter from "../../modules/private/journalEntries/journalEntries.router.js";
 import ledgerRouter from "../../modules/private/ledger/ledger.router.js";
 import voucherTypesRouter from "../../modules/private/voucherTypes/voucherTypes.router.js";
+import bankAccountsRouter from "../../modules/private/bankAccounts/bankAccounts.router.js";
+import financialYearsRouter from "../../modules/private/financialYears/financialYears.router.js";
+import costCentersRouter from "../../modules/private/costCenters/costCenters.router.js";
+import projectsRouter from "../../modules/private/projects/projects.router.js";
+import remindersRouter from "../../modules/private/reminders/reminders.router.js";
+import incomesRouter from "../../modules/private/incomes/incomes.router.js";
+import openingBalancesRouter from "../../modules/private/openingBalances/openingBalances.router.js";
+import budgetsRouter from "../../modules/private/budgets/budgets.router.js";
+import bankTransactionsRouter from "../../modules/private/bankTransactions/bankTransactions.router.js";
 
 // making the router
 const router = express.Router();
@@ -69,6 +78,15 @@ router.use("/accounts", accountsRouter);
 router.use("/journal-entries", journalEntriesRouter);
 router.use("/ledger", ledgerRouter);
 router.use("/voucher-types", voucherTypesRouter);
+router.use("/bank-accounts", bankAccountsRouter);
+router.use("/financial-years", financialYearsRouter);
+router.use("/cost-centers", costCentersRouter);
+router.use("/projects", projectsRouter);
+router.use("/reminders", remindersRouter);
+router.use("/incomes", incomesRouter);
+router.use("/opening-balances", openingBalancesRouter);
+router.use("/budgets", budgetsRouter);
+router.use("/bank-transactions", bankTransactionsRouter);
 
 // exporting the router
 export default router;
