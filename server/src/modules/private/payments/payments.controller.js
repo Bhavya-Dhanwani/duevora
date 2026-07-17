@@ -169,7 +169,7 @@ class PaymentsController {
             if (purchase) {
 
                 const existingPayments = await this.paymentDao.find({ purchaseId: purchase._id }, {}, session);
-                const totalPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0) + amount;
+                const totalPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0);
 
                 if (totalPaid >= purchase.grandTotal) {
 

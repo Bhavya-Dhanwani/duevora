@@ -14,8 +14,8 @@ const createAccountValidators = [
     body("code")
         .notEmpty()
         .withMessage("Account code is required")
-        .isAlphanumeric()
-        .withMessage("Account code must be alphanumeric")
+        .matches(/^[a-zA-Z0-9_]+$/)
+        .withMessage("Account code must be alphanumeric or contain underscores")
         .trim(),
 
     // validating type field

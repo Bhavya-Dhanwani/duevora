@@ -24,6 +24,10 @@ const voucherTypeSchema = new mongoose.Schema({
         required: [true, "Voucher type code is required"],
         trim: true,
         uppercase: true,
+    },
+    description: {
+        type: String,
+        trim: true,
     }
 
 }, {

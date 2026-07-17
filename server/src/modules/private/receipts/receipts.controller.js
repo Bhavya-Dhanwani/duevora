@@ -169,7 +169,7 @@ class ReceiptsController {
             if (invoice) {
 
                 const existingReceipts = await this.receiptDao.find({ invoiceId: invoice._id }, {}, session);
-                const totalPaid = existingReceipts.reduce((sum, r) => sum + r.amount, 0) + amount;
+                const totalPaid = existingReceipts.reduce((sum, r) => sum + r.amount, 0);
 
                 if (totalPaid >= invoice.grandTotal) {
 

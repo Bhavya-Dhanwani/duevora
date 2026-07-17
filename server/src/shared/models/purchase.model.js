@@ -50,7 +50,7 @@ const purchaseSchema = new mongoose.Schema({
 
     status: {
         type: String,
-        enum: ["billed", "paid", "partially_paid"],
+        enum: ["billed", "received", "paid", "partially_paid"],
         default: "billed",
     }
 
