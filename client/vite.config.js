@@ -1,14 +1,19 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react()],
   server: {
     watch: {
       usePolling: true,
       interval: 1000,
     },
     host: true,
+    proxy: {
+      '/api': {
+        target: 'http://server:5000',
+        changeOrigin: true,
+      },
+    },
   },
 })

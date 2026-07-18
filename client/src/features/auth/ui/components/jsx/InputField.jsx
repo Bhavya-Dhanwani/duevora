@@ -12,6 +12,7 @@ export default function InputField({
   value,
   onChange,
   required = false,
+  error,
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
@@ -46,7 +47,7 @@ export default function InputField({
           value={value}
           onChange={onChange}
           required={required}
-          className={styles.input}
+          className={`${styles.input} ${error ? styles.inputError : ""}`}
           autoComplete={isPassword ? "current-password" : name}
         />
         {isPassword && (
@@ -61,6 +62,7 @@ export default function InputField({
           </button>
         )}
       </div>
+      {error && <span className={styles.errorText}>{error}</span>}
     </div>
   );
 }

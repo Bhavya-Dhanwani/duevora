@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import ResetPasswordLayout from "../components/jsx/ResetPasswordLayout";
 import useAuth from "../../hooks/useAuth";
@@ -5,13 +6,13 @@ import useAuth from "../../hooks/useAuth";
 export default function ResetPasswordPage() {
   const { token } = useParams();
   const navigate = useNavigate();
-  const { resetPassword, isLoading } = useAuth();
+  const { resetPassword } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (password) => {
-    const result = await resetPassword(token, password);
-    if (result.success) {
-      navigate("/login");
-    }
+    setIsLoading(true);
+    await resetPassword({ token, password });
+    setIsLoading(false);
   };
 
   return (

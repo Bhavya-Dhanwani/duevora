@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import styles from "./StampNotification.module.css";
-import successStamp from "../../../assets/stamp/success-stamp.png";
-import errorStamp from "../../../assets/stamp/error-stamp.png";
+import successStamp from "../../../assets/success.png";
+import errorStamp from "../../../assets/error.png";
 
 const STAMPS = {
   success: successStamp,
@@ -26,7 +26,7 @@ export default function StampNotification({ notification, onClose }) {
           className={styles.background}
           draggable={false}
         />
-        <div className={styles.messageWrap}>
+        <div className={`${styles.messageWrap} ${type === "success" ? styles.messageWrapSuccess : styles.messageWrapError}`}>
           <p className={`${styles.message} ${styles[`${type}Text`]}`}>
             {message}
           </p>

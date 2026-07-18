@@ -7,7 +7,7 @@ import VerifyEmailForm from "./VerifyEmailForm";
 import ReceiptEdge from "./ReceiptEdge";
 import styles from "../css/AuthLayout.module.css";
 
-export default function VerifyEmailLayout({ email, onVerify, isLoading }) {
+export default function VerifyEmailLayout({ email, onVerify, onResend, isLoading }) {
   return (
     <>
       <BackgroundGrid />
@@ -37,7 +37,7 @@ export default function VerifyEmailLayout({ email, onVerify, isLoading }) {
 
           <Divider />
 
-          <VerifyEmailForm onVerify={onVerify} isLoading={isLoading} />
+          <VerifyEmailForm onVerify={onVerify} onResend={onResend} isLoading={isLoading} />
 
           <Divider />
 

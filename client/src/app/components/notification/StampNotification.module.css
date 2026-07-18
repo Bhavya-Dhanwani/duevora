@@ -24,16 +24,27 @@
 
 .messageWrap {
   position: absolute;
-  inset: 0;
+  top: 55%;
+  left: 38%;
+  right: 6%;
+  bottom: 4%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 20px 40px 20px 120px;
+  padding: 2px 8px;
+}
+
+.messageWrapSuccess {
+  top: 53%;
+}
+
+.messageWrapError {
+  top: 60%;
 }
 
 .message {
   margin: 0;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
   text-align: center;

@@ -1,16 +1,30 @@
-import { useLocation, useNavigate } from "react-router";
+import { useState } from "react";
+import { useLocation } from "react-router";
 import VerifyEmailLayout from "../components/jsx/VerifyEmailLayout";
+import useAuth from "../../hooks/useAuth";
 
 export default function VerifyEmailPage() {
   const location = useLocation();
-  const navigate = useNavigate();
   const email = location.state?.email || "your email";
+  const { verifyEmail, sendOtp } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleVerify = (code) => {
-    console.log("Verifying code:", code);
-    // TODO: call verifyEmail API
-    navigate("/login");
+  const handleVerify = async (code) => {
+    setIsLoading(true);
+    await verifyEmail(code);
+    setIsLoading(false);
   };
 
-  return <VerifyEmailLayout email={email} onVerify={handleVerify} />;
+  const handleResend = async () => {
+    await sendOtp();
+  };
+
+  return (
+    <VerifyEmailLayout
+      email={email}
+      onVerify={handleVerify}
+      onResend={handleResend}
+      isLoading={isLoading}
+    />
+  );
 }

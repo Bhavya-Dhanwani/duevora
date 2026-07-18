@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import BackgroundGrid from "./BackgroundGrid";
 import BlueprintDecorations from "./BlueprintDecorations";
@@ -14,16 +15,28 @@ import styles from "../css/AuthLayout.module.css";
 
 export default function AuthLayout({ initialMode = "login" }) {
   const navigate = useNavigate();
-  const { login, signup, loginWithGoogle, isLoading } = useAuth();
+  const { login, signup, loginWithGoogle } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
   const switchToLogin = () => navigate("/login");
   const switchToSignup = () => navigate("/register");
 
-  const handleSignup = async (name, email, password) => {
-    const result = await signup(name, email, password);
-    if (result.success) {
-      navigate("/verify-email", { state: { email: result.email } });
-    }
+  const handleLogin = async (data) => {
+    setIsLoading(true);
+    await login(data);
+    setIsLoading(false);
+  };
+
+  const handleSignup = async (data) => {
+    setIsLoading(true);
+    await signup(data);
+    setIsLoading(false);
+  };
+
+  const handleGoogleLogin = async (credential) => {
+    setIsLoading(true);
+    await loginWithGoogle(credential);
+    setIsLoading(false);
   };
 
   return (
@@ -47,15 +60,15 @@ export default function AuthLayout({ initialMode = "login" }) {
 
           {initialMode === "login" ? (
             <LoginForm
-              onLogin={login}
-              onGoogleLogin={loginWithGoogle}
+              onLogin={handleLogin}
+              onGoogleLogin={handleGoogleLogin}
               isLoading={isLoading}
               onSwitch={switchToSignup}
             />
           ) : (
             <SignupForm
               onSignup={handleSignup}
-              onGoogleLogin={loginWithGoogle}
+              onGoogleLogin={handleGoogleLogin}
               isLoading={isLoading}
               onSwitch={switchToLogin}
             />

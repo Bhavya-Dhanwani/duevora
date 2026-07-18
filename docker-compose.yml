@@ -18,7 +18,7 @@ services:
     image: node:20-alpine
     container_name: duevora-client-dev
     working_dir: /app/client
-    command: npx vite --host
+    command: sh -c "npm install && npx vite --host"
     volumes:
       - .:/app
       - /app/client/node_modules

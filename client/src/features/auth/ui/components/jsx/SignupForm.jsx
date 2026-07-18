@@ -6,15 +6,33 @@ import LoginButton from "./LoginButton";
 import Separator from "./Separator";
 import GoogleButton from "./GoogleButton";
 import SwitchText from "./SwitchText";
+import { signupSchema } from "../../../api/validation";
+import useNotification from "../../../../../app/components/notification/useNotification";
 
 export default function SignupForm({ onSignup, onGoogleLogin, isLoading, onSwitch }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
+  const [errors, setErrors] = useState({});
+  const { error: showError } = useNotification();
+
+  const handleChange = (field) => (e) => {
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSignup(name, email, password);
+    setErrors({});
+    const result = signupSchema.safeParse(form);
+    if (!result.success) {
+      const fieldErrors = {};
+      result.error.issues.forEach((issue) => {
+        fieldErrors[issue.path[0]] = issue.message;
+      });
+      setErrors(fieldErrors);
+      showError(result.error.issues[0].message);
+      return;
+    }
+    onSignup(form);
   };
 
   return (
@@ -25,8 +43,9 @@ export default function SignupForm({ onSignup, onGoogleLogin, isLoading, onSwitc
         name="name"
         placeholder="Enter your full name"
         icon="person"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
+        value={form.name}
+        onChange={handleChange("name")}
+        error={errors.name}
         required
       />
 
@@ -36,14 +55,24 @@ export default function SignupForm({ onSignup, onGoogleLogin, isLoading, onSwitc
         name="email"
         placeholder="Enter your email"
         icon="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        value={form.email}
+        onChange={handleChange("email")}
+        error={errors.email}
         required
       />
 
       <PasswordField
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        value={form.password}
+        onChange={handleChange("password")}
+        error={errors.password}
+      />
+
+      <PasswordField
+        label="CONFIRM PASSWORD"
+        placeholder="Confirm your password"
+        value={form.confirmPassword}
+        onChange={handleChange("confirmPassword")}
+        error={errors.confirmPassword}
       />
 
       <LoginButton isLoading={isLoading} text="SIGNUP" />

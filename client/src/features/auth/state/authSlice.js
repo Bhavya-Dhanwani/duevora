@@ -1,34 +1,33 @@
-import { useState, useCallback, useContext, createContext } from "react";
+import { createSlice } from "@reduxjs/toolkit";
 
-const AuthContext = createContext(null);
+const initialState = {
+  user: null,
+  accessToken: null,
+  isAuthenticated: false,
+};
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+const authSlice = createSlice({
+  name: "auth",
+  initialState,
+  reducers: {
+    setCredentials: (state, { payload }) => {
+      state.user = payload.user;
+      state.accessToken = payload.accessToken;
+      state.isAuthenticated = true;
+    },
+    setUser: (state, { payload }) => {
+      state.user = payload;
+    },
+    setAccessToken: (state, { payload }) => {
+      state.accessToken = payload;
+    },
+    logout: (state) => {
+      state.user = null;
+      state.accessToken = null;
+      state.isAuthenticated = false;
+    },
+  },
+});
 
-  const handleLogin = useCallback((userData) => {
-    setUser(userData);
-    setIsAuthenticated(true);
-  }, []);
-
-  const handleLogout = useCallback(() => {
-    setUser(null);
-    setIsAuthenticated(false);
-  }, []);
-
-  return (
-    <AuthContext.Provider
-      value={{ user, isAuthenticated, login: handleLogin, logout: handleLogout }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export function useAuthState() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuthState must be used within an AuthProvider");
-  }
-  return context;
-}
+export const { setCredentials, setUser, setAccessToken, logout } = authSlice.actions;
+export default authSlice.reducer;

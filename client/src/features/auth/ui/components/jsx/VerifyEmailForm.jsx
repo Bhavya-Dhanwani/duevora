@@ -3,7 +3,7 @@ import { MdArrowForward } from "react-icons/md";
 import styles from "../css/VerifyEmailForm.module.css";
 import VerificationCode from "./VerificationCode";
 
-export default function VerifyEmailForm({ onVerify, isLoading }) {
+export default function VerifyEmailForm({ onVerify, onResend, isLoading }) {
   const [code, setCode] = useState("");
   const [seconds, setSeconds] = useState(45);
   const [canResend, setCanResend] = useState(false);
@@ -21,7 +21,8 @@ export default function VerifyEmailForm({ onVerify, isLoading }) {
     if (!canResend) return;
     setSeconds(45);
     setCanResend(false);
-  }, [canResend]);
+    onResend?.();
+  }, [canResend, onResend]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

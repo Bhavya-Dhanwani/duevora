@@ -10,6 +10,9 @@ import MainLayout from "../layouts/MainLayout";
 import AuthLayout from "../layouts/AuthLayout";
 import DashboardLayout from "../layouts/DashboardLayout";
 
+import PublicRoute from "../components/routes/PublicRoute";
+import ProtectedRoute from "../components/routes/ProtectedRoute";
+
 export const routes = [
   {
     element: <MainLayout />,
@@ -22,37 +25,58 @@ export const routes = [
   },
 
   {
-    element: <AuthLayout />,
+    element: <PublicRoute />,
     children: [
       {
-        path: "/login",
-        element: <LoginPage />,
-      },
-      {
-        path: "/register",
-        element: <RegisterPage />,
-      },
-      {
-        path: "/verify-email",
-        element: <VerifyEmailPage />,
-      },
-      {
-        path: "/forgot-password",
-        element: <ForgotPasswordPage />,
-      },
-      {
-        path: "/reset-password/:token",
-        element: <ResetPasswordPage />,
+        element: <AuthLayout />,
+        children: [
+          {
+            path: "/login",
+            element: <LoginPage />,
+          },
+          {
+            path: "/register",
+            element: <RegisterPage />,
+          },
+          {
+            path: "/forgot-password",
+            element: <ForgotPasswordPage />,
+          },
+          {
+            path: "/reset-password/:token",
+            element: <ResetPasswordPage />,
+          },
+        ],
       },
     ],
   },
 
   {
-    element: <DashboardLayout />,
+    element: <ProtectedRoute />,
     children: [
       {
-        path: "/dashboard",
-        element: <DashboardPage />,
+        element: <AuthLayout />,
+        children: [
+          {
+            path: "/verify-email",
+            element: <VerifyEmailPage />,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    element: <ProtectedRoute requireVerified />,
+    children: [
+      {
+        element: <DashboardLayout />,
+        children: [
+          {
+            path: "/dashboard",
+            element: <DashboardPage />,
+          },
+        ],
       },
     ],
   },

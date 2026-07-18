@@ -1,6 +1,6 @@
 import InputField from "./InputField";
 
-export default function PasswordField({ label, name, placeholder, value, onChange }) {
+export default function PasswordField({ label, name, placeholder, value, onChange, error }) {
   return (
     <InputField
       label={label || "PASSWORD"}
@@ -10,6 +10,7 @@ export default function PasswordField({ label, name, placeholder, value, onChang
       icon="lock"
       value={value}
       onChange={onChange}
+      error={error}
       required
     />
   );

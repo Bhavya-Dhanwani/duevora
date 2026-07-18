@@ -1,16 +1,17 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import ForgotPasswordLayout from "../components/jsx/ForgotPasswordLayout";
 import useAuth from "../../hooks/useAuth";
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
-  const { forgotPassword, isLoading } = useAuth();
+  const { forgotPassword } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (email) => {
-    const result = await forgotPassword(email);
-    if (result.success) {
-      navigate("/verify-email", { state: { email } });
-    }
+    setIsLoading(true);
+    await forgotPassword(email);
+    setIsLoading(false);
   };
 
   return (
