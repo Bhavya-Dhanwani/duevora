@@ -64,5 +64,20 @@ export default function useAuth() {
     }
   }, []);
 
-  return { login, signup, loginWithGoogle, forgotPassword, isLoading, error };
+  const resetPassword = useCallback(async (token, password) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // TODO: Integrate with auth API
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return { success: true };
+    } catch (err) {
+      setError(err.message || "Failed to reset password");
+      return { success: false, error: err.message };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { login, signup, loginWithGoogle, forgotPassword, resetPassword, isLoading, error };
 }
