@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useNavigate } from "react-router";
 import BackgroundGrid from "./BackgroundGrid";
 import BlueprintDecorations from "./BlueprintDecorations";
 import InvoiceHeader from "./InvoiceHeader";
@@ -13,11 +13,11 @@ import useAuth from "../../../hooks/useAuth";
 import styles from "../css/AuthLayout.module.css";
 
 export default function AuthLayout({ initialMode = "login" }) {
-  const [mode, setMode] = useState(initialMode);
+  const navigate = useNavigate();
   const { login, signup, loginWithGoogle, isLoading } = useAuth();
 
-  const switchToLogin = () => setMode("login");
-  const switchToSignup = () => setMode("signup");
+  const switchToLogin = () => navigate("/login");
+  const switchToSignup = () => navigate("/register");
 
   return (
     <>
@@ -32,13 +32,13 @@ export default function AuthLayout({ initialMode = "login" }) {
           <Divider />
 
           <div className={styles.welcomeRow}>
-            <WelcomeSection mode={mode} />
+            <WelcomeSection mode={initialMode} />
             <BarcodeSection />
           </div>
 
           <Divider />
 
-          {mode === "login" ? (
+          {initialMode === "login" ? (
             <LoginForm
               onLogin={login}
               onGoogleLogin={loginWithGoogle}
