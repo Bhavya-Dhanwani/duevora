@@ -18,7 +18,17 @@ function applyMiddlewares(app) {
     
     app.use(cors()); // to enable CORS (Cross-Origin Resource Sharing) for all routes
 
-    app.use(helmet()); // to secure the app by setting various HTTP headers
+    app.use(helmet({
+        crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+        contentSecurityPolicy: {
+            directives: {
+                "script-src": ["'self'", "https://accounts.google.com/gsi/client"],
+                "style-src": ["'self'", "'unsafe-inline'", "https://accounts.google.com/gsi/style"],
+                "connect-src": ["'self'", "https://accounts.google.com/gsi/"],
+                "frame-src": ["'self'", "https://accounts.google.com/gsi/"],
+            },
+        },
+    })); // to secure the app while allowing Google Identity Services
 
     app.use(cookieParser()); // to parse Cookie header and populate req.cookies with an object keyed by the cookie names
 

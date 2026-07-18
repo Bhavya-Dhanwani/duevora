@@ -9,7 +9,7 @@ import SwitchText from "./SwitchText";
 import { signupSchema } from "../../../api/validation";
 import useNotification from "../../../../../app/components/notification/useNotification";
 
-export default function SignupForm({ onSignup, onGoogleLogin, isLoading, onSwitch }) {
+export default function SignupForm({ onSignup, isLoading, onSwitch }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [errors, setErrors] = useState({});
   const { error: showError } = useNotification();
@@ -85,7 +85,7 @@ export default function SignupForm({ onSignup, onGoogleLogin, isLoading, onSwitc
 
       <Separator text="OR" />
 
-      <GoogleButton onClick={onGoogleLogin} />
+      <GoogleButton />
     </form>
   );
 }

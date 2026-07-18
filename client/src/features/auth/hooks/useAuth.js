@@ -66,25 +66,6 @@ export default function useAuth() {
     [dispatch, success, error, navigate]
   );
 
-  const loginWithGoogle = useCallback(
-    async (credential) => {
-      try {
-        const res = await authApi.googleLogin(credential);
-        const { user, accessToken } = res.data;
-        setAccessToken(accessToken);
-        dispatch(setCredentials({ user, accessToken }));
-        success(res.message || "Logged in with Google");
-        navigate("/dashboard");
-        return { success: true, user };
-      } catch (err) {
-        const msg = err.response?.data?.message || "Google login failed";
-        error(msg);
-        return { success: false, error: msg };
-      }
-    },
-    [dispatch, success, error, navigate]
-  );
-
   const verifyEmail = useCallback(
     async (otp) => {
       try {
@@ -176,7 +157,6 @@ export default function useAuth() {
   return {
     signup,
     login,
-    loginWithGoogle,
     verifyEmail,
     sendOtp,
     forgotPassword,

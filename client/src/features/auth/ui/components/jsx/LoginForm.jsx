@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router";
 import styles from "../css/LoginForm.module.css";
 import InputField from "./InputField";
 import PasswordField from "./PasswordField";
@@ -10,11 +11,18 @@ import SwitchText from "./SwitchText";
 import { loginSchema } from "../../../api/validation";
 import useNotification from "../../../../../app/components/notification/useNotification";
 
-export default function LoginForm({ onLogin, onGoogleLogin, isLoading, onSwitch }) {
+export default function LoginForm({ onLogin, isLoading, onSwitch }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
   const { error: showError } = useNotification();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("googleError") === "1") {
+      showError("Google sign-in failed. Please try again.");
+    }
+  }, [searchParams, showError]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -64,7 +72,7 @@ export default function LoginForm({ onLogin, onGoogleLogin, isLoading, onSwitch 
 
       <Separator text="OR" />
 
-      <GoogleButton onClick={onGoogleLogin} />
+      <GoogleButton />
     </form>
   );
 }
