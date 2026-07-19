@@ -60,7 +60,6 @@ async function startWorkerProcess() {
         if (shutdownStarted) return;
 
         const worker = await startReminderWorker();
-        await worker.waitUntilReady();
         if (shutdownStarted) return;
 
         await startReminderRecovery();

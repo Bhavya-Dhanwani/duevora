@@ -52,7 +52,6 @@ async function startReminderRuntime() {
         const worker = await startReminderWorker();
         if (!worker) return;
 
-        await worker.waitUntilReady();
         if (shutdownStarted) return;
 
         await startReminderRecovery();

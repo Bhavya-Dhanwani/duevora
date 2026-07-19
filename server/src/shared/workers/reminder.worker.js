@@ -270,22 +270,35 @@ async function startReminderWorker() {
 
     try {
         reminderWorker = buildReminderWorker({ connection: reminderWorkerConnection });
-        return reminderWorker;
+        return await waitForReminderWorkerReady(reminderWorker);
     } catch (error) {
-        await closeRedisConnection(reminderWorkerConnection);
-        reminderWorkerConnection = null;
+        if (reminderWorker || reminderWorkerConnection) {
+            await closeReminderWorker(true);
+        }
         throw error;
     }
 }
 
-async function closeReminderWorker() {
+async function waitForReminderWorkerReady(worker, cleanup = closeReminderWorker) {
+    try {
+        await worker.waitUntilReady();
+        return worker;
+    } catch (error) {
+        // A Worker keeps reconnecting after its readiness promise rejects. Close
+        // it immediately so a Redis startup outage cannot flood API logs.
+        await cleanup(true);
+        throw error;
+    }
+}
+
+async function closeReminderWorker(force = false) {
     const worker = reminderWorker;
     const connection = reminderWorkerConnection;
     reminderWorker = null;
     reminderWorkerConnection = null;
 
     try {
-        if (worker) await worker.close();
+        if (worker) await worker.close(force);
     } finally {
         await closeRedisConnection(connection);
     }
@@ -304,4 +317,5 @@ export {
     isFullyDelivered,
     processReminderJob,
     startReminderWorker,
+    waitForReminderWorkerReady,
 };

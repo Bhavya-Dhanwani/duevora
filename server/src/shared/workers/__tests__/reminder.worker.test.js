@@ -3,6 +3,7 @@ import { UnrecoverableError } from "bullmq";
 import {
     buildReminderWorker,
     processReminderJob,
+    waitForReminderWorkerReady,
 } from "../reminder.worker.js";
 
 const reminderId = "507f1f77bcf86cd799439011";
@@ -201,5 +202,27 @@ describe("reminder worker factory", () => {
             concurrency: 7,
         });
         expect(eventNames).toEqual(["completed", "failed", "stalled", "error"]);
+    });
+
+    it("closes a Worker after Redis readiness fails", async () => {
+        const connectionError = new Error("Redis unavailable");
+        const worker = {
+            waitUntilReady: jest.fn().mockRejectedValue(connectionError),
+        };
+        const cleanup = jest.fn().mockResolvedValue();
+
+        await expect(waitForReminderWorkerReady(worker, cleanup)).rejects.toBe(connectionError);
+
+        expect(cleanup).toHaveBeenCalledWith(true);
+    });
+
+    it("keeps a ready Worker running", async () => {
+        const worker = {
+            waitUntilReady: jest.fn().mockResolvedValue(),
+        };
+        const cleanup = jest.fn();
+
+        await expect(waitForReminderWorkerReady(worker, cleanup)).resolves.toBe(worker);
+        expect(cleanup).not.toHaveBeenCalled();
     });
 });
