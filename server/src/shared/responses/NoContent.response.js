@@ -1,5 +1,5 @@
 // Importing modules 
-import ApiReponse from "../utils/ApiResponse.util";
+import ApiReponse from "../utils/ApiResponse.util.js";
 import HTTP_STATUS from "../constants/StatusCodes.constants.js";
 
 // function to send the no content response
