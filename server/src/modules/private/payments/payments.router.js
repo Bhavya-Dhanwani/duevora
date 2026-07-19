@@ -18,5 +18,7 @@ const controller = new PaymentsController();
 */
 router.post("/", authMiddleware, permissionMiddleware("payments.create"), createPaymentValidators, controller.createPayment);
 
+router.get("/", authMiddleware, permissionMiddleware("payments.view"), controller.listPayments);
+
 // exporting the router
 export default router;

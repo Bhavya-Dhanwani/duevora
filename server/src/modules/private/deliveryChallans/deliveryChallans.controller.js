@@ -64,6 +64,19 @@ class DeliveryChallansController {
 
     }
 
+    listDeliveryChallans = async (req, res) => {
+        const organizationId = req.user.organizationId;
+        const filter = { organizationId };
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const skip = (page - 1) * limit;
+        const sortBy = req.query.sortBy || "createdAt";
+        const sortOrder = req.query.sortOrder === "desc" ? -1 : 1;
+        const total = await this.deliveryChallanDao.Model.countDocuments(filter);
+        const items = await this.deliveryChallanDao.find(filter, { sort: { [sortBy]: sortOrder }, limit, skip });
+        return res.status(200).json({ success: true, status: 200, message: "Delivery challans retrieved successfully", data: items, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+    }
+
 }
 
 export default DeliveryChallansController;

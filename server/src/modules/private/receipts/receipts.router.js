@@ -18,5 +18,7 @@ const controller = new ReceiptsController();
 */
 router.post("/", authMiddleware, permissionMiddleware("receipts.create"), createReceiptValidators, controller.createReceipt);
 
+router.get("/", authMiddleware, permissionMiddleware("receipts.view"), controller.listReceipts);
+
 // exporting the router
 export default router;

@@ -18,5 +18,7 @@ const controller = new CurrenciesController();
 */
 router.post("/", authMiddleware, permissionMiddleware("currencies.create"), createCurrencyValidators, controller.createCurrency);
 
+router.get("/", authMiddleware, permissionMiddleware("currencies.view"), controller.listCurrencies);
+
 // exporting the router
 export default router;

@@ -38,5 +38,12 @@ router.get("/balance-sheet", authMiddleware, permissionMiddleware("reports.view"
 */
 router.get("/cash-flow", authMiddleware, permissionMiddleware("reports.view"), controller.cashFlow);
 
+/*
+    @route GET /api/reports/ratios
+    @desc Retrieve the business ratios report for the organization
+    @access Private (requires reports.view permission)
+*/
+router.get("/ratios", authMiddleware, permissionMiddleware("reports.view"), controller.businessRatios);
+
 // exporting the router
 export default router;

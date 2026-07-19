@@ -18,5 +18,7 @@ const controller = new ExpensesController();
 */
 router.post("/", authMiddleware, permissionMiddleware("expenses.create"), createExpenseValidators, controller.createExpense);
 
+router.get("/", authMiddleware, permissionMiddleware("expenses.view"), controller.listExpenses);
+
 // exporting the router
 export default router;

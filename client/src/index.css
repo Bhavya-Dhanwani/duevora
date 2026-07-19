@@ -101,3 +101,12 @@ body {
     transform: translateX(420%);
   }
 }
+
+.hide-scrollbar,
+.hide-scrollbar * {
+  scrollbar-width: none !important; /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar,
+.hide-scrollbar *::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Opera */
+}

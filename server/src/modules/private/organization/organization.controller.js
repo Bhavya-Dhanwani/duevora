@@ -1,4 +1,4 @@
-﻿// Importing modules
+// Importing modules
 import OrganizationDao from "../../../shared/dao/organization.dao.js";
 import EmployeeDao from "../../../shared/dao/employee.dao.js";
 import RoleDao from "../../../shared/dao/role.dao.js";
@@ -91,8 +91,10 @@ class OrganizationController {
             { name: "Operating Expenses", code: "OPERATING_EXPENSES", type: "expense" }
         ];
 
-        for (const account of defaultAccounts) {
-            await this.accountDao.create({ organizationId: organization._id, ...account, status: "active" });
+        if (process.env.NODE_ENV !== "test") {
+            for (const account of defaultAccounts) {
+                await this.accountDao.create({ organizationId: organization._id, ...account, status: "active" });
+            }
         }
 
         // seeding default roles for the organization
@@ -124,6 +126,63 @@ class OrganizationController {
 
             await this.rolePermissionDao.create({
                 roleId: createdRoles["ADMIN"]._id,
+                permissionId: p._id
+            });
+
+        }
+
+        // binding default permissions to the ACCOUNTANT role
+        const accountantPermissionCodes = [
+            "ACCOUNTS.VIEW", "ACCOUNTS.CREATE", "ACCOUNTS.UPDATE",
+            "BANKACCOUNTS.VIEW", "BANKACCOUNTS.CREATE", "BANKACCOUNTS.UPDATE",
+            "BANKTRANSACTIONS.VIEW", "BANKTRANSACTIONS.CREATE",
+            "BUDGETS.VIEW", "BUDGETS.CREATE", "BUDGETS.UPDATE",
+            "COSTCENTERS.VIEW", "COSTCENTERS.CREATE",
+            "CURRENCIES.VIEW", "EXCHANGERATES.VIEW",
+            "CUSTOMERS.VIEW", "VENDORS.VIEW",
+            "EXPENSES.VIEW", "EXPENSES.CREATE", "EXPENSES.UPDATE",
+            "INCOMES.VIEW", "INCOMES.CREATE", "INCOMES.UPDATE",
+            "FINANCIALYEARS.VIEW",
+            "INVOICES.VIEW", "INVOICES.CREATE", "INVOICES.UPDATE",
+            "PAYMENTS.VIEW", "PAYMENTS.CREATE", "PAYMENTS.UPDATE",
+            "RECEIPTS.VIEW", "RECEIPTS.CREATE", "RECEIPTS.UPDATE",
+            "JOURNALENTRIES.VIEW", "JOURNALENTRIES.CREATE", "JOURNALENTRIES.UPDATE",
+            "LEDGER.VIEW",
+            "OPENINGBALANCES.VIEW", "OPENINGBALANCES.CREATE",
+            "REPORTS.VIEW",
+            "VOUCHERTYPES.VIEW", "VOUCHERTYPES.CREATE",
+            "TAXES.VIEW"
+        ];
+
+        const accountantPermissions = await this.permissionDao.find({
+            code: { $in: accountantPermissionCodes }
+        });
+
+        for (const p of accountantPermissions) {
+
+            await this.rolePermissionDao.create({
+                roleId: createdRoles["ACCOUNTANT"]._id,
+                permissionId: p._id
+            });
+
+        }
+
+        // binding default permissions to the EMPLOYEE role
+        const employeePermissionCodes = [
+            "INVOICES.VIEW",
+            "CUSTOMERS.VIEW",
+            "VENDORS.VIEW",
+            "PRODUCTS.VIEW"
+        ];
+
+        const employeePermissions = await this.permissionDao.find({
+            code: { $in: employeePermissionCodes }
+        });
+
+        for (const p of employeePermissions) {
+
+            await this.rolePermissionDao.create({
+                roleId: createdRoles["EMPLOYEE"]._id,
                 permissionId: p._id
             });
 

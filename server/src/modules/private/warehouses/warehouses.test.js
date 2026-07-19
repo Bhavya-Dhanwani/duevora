@@ -40,12 +40,19 @@ beforeEach(async () => {
         await collections[key].deleteMany({});
     }
 
-    // Seed permission
-    await Permission.create({
-        name: "Create Warehouses",
-        code: "WAREHOUSES.CREATE",
-        module: "warehouses"
-    });
+    // Seed permissions
+    await Permission.insertMany([
+        {
+            name: "Create Warehouses",
+            code: "WAREHOUSES.CREATE",
+            module: "warehouses"
+        },
+        {
+            name: "View Warehouses",
+            code: "WAREHOUSES.VIEW",
+            module: "warehouses"
+        }
+    ]);
 
     // Create Admin User
     const adminUser = await User.create({
@@ -185,6 +192,35 @@ describe("Warehouses Management Integration Tests", () => {
                     name: "Unpermitted",
                     code: "UNPM"
                 });
+
+            expect(res.status).toBe(403);
+        });
+    });
+
+    describe("GET /api/warehouses", () => {
+        it("should successfully retrieve list of warehouses for the current organization", async () => {
+            // Seed a warehouse
+            await Warehouse.create({
+                name: "Central Warehouse",
+                code: "CWH",
+                organizationId: orgId
+            });
+
+
+            const res = await request(app)
+                .get("/api/warehouses")
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data).toHaveLength(1);
+            expect(res.body.data[0].name).toBe("Central Warehouse");
+        });
+
+        it("should return forbidden if user does not have WAREHOUSES.VIEW permission", async () => {
+            const res = await request(app)
+                .get("/api/warehouses")
+                .set("Authorization", `Bearer ${userWithoutPermToken}`);
 
             expect(res.status).toBe(403);
         });

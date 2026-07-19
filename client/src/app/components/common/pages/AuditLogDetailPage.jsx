@@ -29,8 +29,8 @@ export default function AuditLogDetailPage() {
         title="Audit Log Detail"
         subtitle={`Action: ${log.action || "—"}`}
         action={
-          <Button variant="secondary" onClick={() => navigate("/dashboard/audit-logs")}>
-            <HiOutlineArrowLeft style={{ marginRight: 6 }} /> Back
+          <Button variant="secondary" onClick={() => navigate("/dashboard/audit-logs")} icon={HiOutlineArrowLeft}>
+            Back
           </Button>
         }
       />

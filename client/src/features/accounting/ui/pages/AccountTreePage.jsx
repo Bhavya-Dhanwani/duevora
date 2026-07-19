@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HiPlus, HiChevronDown, HiChevronRight } from "react-icons/hi2";
+import { HiPlus, HiChevronDown, HiChevronRight, HiOutlineDocumentArrowDown } from "react-icons/hi2";
+import { exportToPdf } from "../../../../lib/exportToPdf";
 import { accountingApi } from "../../api/accountingApi";
 import { Button, EmptyState, Modal, PageHeader } from "../../../../app/components/common";
 import useNotification from "../../../../app/components/notification/useNotification";
@@ -132,8 +133,11 @@ export default function AccountTreePage() {
     <div style={{ maxWidth: 1100, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
         <PageHeader title="Chart of Accounts" subtitle="Organize the accounts used by your general ledger." />
-        <Button variant="primary" onClick={() => setOpen(true)}>
-          <HiPlus style={{ marginRight: 6 }} />Create account
+        <Button variant="primary" onClick={() => setOpen(true)} icon={HiPlus}>
+          Create account
+        </Button>
+        <Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "Chart of Accounts", columns: [{key:"code",label:"Code"},{key:"name",label:"Name"},{key:"type",label:"Type"},{key:"status",label:"Status"}], data: accounts, filename: "chart-of-accounts" })}>
+          Export PDF
         </Button>
       </div>
 

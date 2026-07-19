@@ -18,5 +18,12 @@ const controller = new DeliveryChallansController();
 */
 router.post("/", authMiddleware, permissionMiddleware("deliveryChallans.create"), createDeliveryChallanValidators, controller.createDeliveryChallan);
 
+/*
+    @route GET /api/delivery-challans
+    @desc Get all delivery challans for the current organization
+    @access Private (requires deliveryChallans.view permission)
+*/
+router.get("/", authMiddleware, permissionMiddleware("deliveryChallans.view"), controller.listDeliveryChallans);
+
 // exporting the router
 export default router;

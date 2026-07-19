@@ -269,6 +269,61 @@ describe("Employee Member Invitation & Creation Integration Tests", () => {
         });
     });
 
+    describe("POST /api/auth/login (with invitation token)", () => {
+        it("should successfully log in an existing user using an invitation token and assign organization / role", async () => {
+            const { default: EmployeeRole } = await import("../../../shared/models/employeeRole.model.js");
+
+            // Setup: Create an existing user first
+            const existingUserEmail = "existinguser@example.com";
+            const existingUserPassword = "securepassword";
+            await User.create({
+                name: "Existing User",
+                email: existingUserEmail,
+                password: existingUserPassword,
+                isVerified: true
+            });
+
+            // Setup: Create invitation token
+            const tokenVal = "logininvitetoken123";
+            await Token.create({
+                email: existingUserEmail,
+                type: "invitation",
+                value: tokenVal,
+                roleId: adminRoleId,
+                organizationId: orgId,
+                expiresAt: new Date(Date.now() + 15 * 60 * 1000)
+            });
+
+            const loginPayload = {
+                email: existingUserEmail,
+                password: existingUserPassword,
+                token: tokenVal
+            };
+
+            const res = await request(app)
+                .post("/api/auth/login")
+                .send(loginPayload);
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.accessToken).toBeDefined();
+
+            // Verify token was deleted
+            const dbToken = await Token.findOne({ value: tokenVal });
+            expect(dbToken).toBeNull();
+
+            // Verify employee profile was created for existing user
+            const employee = await Employee.findOne({ email: existingUserEmail });
+            expect(employee).toBeDefined();
+            expect(employee.organizationId.toString()).toBe(orgId.toString());
+
+            // Verify role was assigned
+            const employeeRole = await EmployeeRole.findOne({ employeeId: employee._id });
+            expect(employeeRole).toBeDefined();
+            expect(employeeRole.roleId.toString()).toBe(adminRoleId.toString());
+        });
+    });
+
     describe("POST /api/employees", () => {
         it("should successfully create employee profile manually", async () => {
             const res = await request(app)

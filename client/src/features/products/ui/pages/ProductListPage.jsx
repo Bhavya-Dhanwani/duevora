@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { HiPlus, HiOutlinePencilSquare, HiOutlineTrash } from "react-icons/hi2";
+import { HiPlus, HiOutlinePencilSquare, HiOutlineTrash, HiOutlineDocumentArrowDown } from "react-icons/hi2";
 import useProducts from "../../hooks/useProducts";
 import {
   PageHeader, Button, DataTable, FilterBar, StatusBadge,
   ConfirmDialog, DropdownMenu, DropdownItem, AccessDenied,
 } from "../../../../app/components/common";
+import { exportToPdf } from "../../../../lib/exportToPdf";
 import s from "../css/ProductList.module.css";
 
 const columns = [
@@ -61,7 +62,10 @@ export default function ProductListPage() {
   return (
     <div className={s.page}>
       <PageHeader
-        action={<Button icon={HiPlus} onClick={() => navigate("/dashboard/products/create")} variant="primary">Add Product</Button>}
+        action={<>
+          <Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ data: items, columns: [{key:"name",label:"Name"},{key:"sku",label:"SKU"},{key:"sellingPrice",label:"Price"},{key:"status",label:"Status"}], filename: "products" })}>Export PDF</Button>
+          <Button icon={HiPlus} onClick={() => navigate("/dashboard/products/create")} variant="primary">Add Product</Button>
+        </>}
         subtitle="Manage your product catalog and inventory"
         title="Products"
       />

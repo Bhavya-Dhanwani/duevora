@@ -18,5 +18,12 @@ const controller = new WarehousesController();
 */
 router.post("/", authMiddleware, permissionMiddleware("warehouses.create"), createWarehouseValidators, controller.createWarehouse);
 
+/*
+    @route GET /api/warehouses
+    @desc List warehouses in the current organization
+    @access Private (requires warehouses.view permission)
+*/
+router.get("/", authMiddleware, permissionMiddleware("warehouses.view"), controller.listWarehouses);
+
 // exporting the router
 export default router;

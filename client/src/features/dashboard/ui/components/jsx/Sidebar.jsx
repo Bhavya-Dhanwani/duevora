@@ -1,4 +1,4 @@
-﻿import {
+import {
   HiOutlineBanknotes,
   HiOutlineBuildingStorefront,
   HiOutlineChartBarSquare,
@@ -40,9 +40,11 @@ const navigationItems = [
   { icon: HiOutlineShoppingBag, label: "Purchase Orders", to: "/dashboard/purchase-orders", permission: "purchaseOrders.view" },
   { icon: HiOutlineCurrencyDollar, label: "Accounts", to: "/dashboard/accounts", permission: "accounts.view" },
   { icon: HiOutlineBookOpen, label: "Journal Entries", to: "/dashboard/journal-entries", permission: "journalEntries.view" },
+  { icon: HiOutlineClipboardDocumentList, label: "Voucher Types", to: "/dashboard/voucher-types", permission: "voucherTypes.view" },
   { icon: HiOutlineCreditCard, label: "Banking", to: "/dashboard/bank-accounts" },
   { icon: HiOutlineBanknotes, label: "Cash Entries", to: "/dashboard/cash-entries" },
   { icon: HiOutlineBuildingStorefront, label: "Inventory", to: "/dashboard/inventory", permission: "inventory.view" },
+  { icon: HiOutlineBuildingStorefront, label: "Warehouses", to: "/dashboard/inventory?tab=warehouses", permission: "warehouses.view" },
   { icon: HiOutlineCubeTransparent, label: "Stock Movements", to: "/dashboard/stock-movements", permission: "stockMovements.view" },
   { icon: HiOutlineArrowTrendingUp, label: "Reports", to: "/dashboard/reports", permission: "reports.view" },
   { icon: HiOutlineUserGroup, label: "Employees", to: "/dashboard/employees", permission: "employees.view" },
@@ -54,9 +56,9 @@ const navigationItems = [
 
 export default function Sidebar({ isOpen, onClose, onLogout }) {
   const user = useAppSelector((state) => state.auth.user);
-  const permissions = new Set(user?.permissions || []);
+  const permissions = new Set((user?.permissions || []).map((p) => p.toUpperCase()));
   const isAdmin = user?.roles?.includes("ADMIN");
-  const visibleNavigationItems = navigationItems.filter((item) => !item.permission || isAdmin || permissions.has(item.permission));
+  const visibleNavigationItems = navigationItems.filter((item) => !item.permission || isAdmin || permissions.has(item.permission.toUpperCase()));
   return (
     <aside className={[styles.sidebar, isOpen && styles.open].filter(Boolean).join(" ")}>
       <ReceiptEdge position="top" />

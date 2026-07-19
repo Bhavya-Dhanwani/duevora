@@ -18,5 +18,7 @@ const controller = new ProjectsController();
 */
 router.post("/", authMiddleware, permissionMiddleware("projects.create"), createProjectValidators, controller.createProject);
 
+router.get("/", authMiddleware, permissionMiddleware("projects.view"), controller.listProjects);
+
 // exporting the router
 export default router;

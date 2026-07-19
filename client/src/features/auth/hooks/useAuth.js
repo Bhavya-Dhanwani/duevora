@@ -44,9 +44,9 @@ export default function useAuth() {
   );
 
   const login = useCallback(
-    async ({ email, password }) => {
+    async ({ email, password, token }) => {
       try {
-        const res = await authApi.login({ email, password });
+        const res = await authApi.login({ email, password, token });
         const { user, accessToken } = res.data;
         setAccessToken(accessToken);
         dispatch(setCredentials({ user, accessToken }));

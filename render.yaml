@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: duevora
+    runtime: image
+    image:
+      url: # leave empty — Render builds from Dockerfile
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGO_URI
+        sync: false # set manually in Render dashboard
+      - key: ACCESS_TOKEN_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        fromService:
+          name: duevora
+          type: web
+          property: url
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        fromService:
+          name: duevora
+          type: web
+          property: url
+        # append /api/auth/google/callback manually
+      - key: REDIS_URL
+        sync: false
+      - key: SEND_MAIL
+        value: "false"
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SENDING_USER
+        value: "Duevora <noreply@duevora.com>"
+    healthCheckPath: /api/health
+    autoDeploy: true

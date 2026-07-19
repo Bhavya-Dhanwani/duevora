@@ -18,5 +18,7 @@ const controller = new BudgetsController();
 */
 router.post("/", authMiddleware, permissionMiddleware("budgets.create"), createBudgetValidators, controller.createBudget);
 
+router.get("/", authMiddleware, permissionMiddleware("budgets.view"), controller.listBudgets);
+
 // exporting the router
 export default router;

@@ -26,13 +26,12 @@ WORKDIR /app/server
 
 # Set to production mode
 ENV NODE_ENV=production
-ENV PORT=3000
 
 # Copy server package configuration files
 COPY server/package*.json ./
 
 # Install only production dependencies (omit devDependencies)
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copy server code
 COPY server/ ./
@@ -40,8 +39,8 @@ COPY server/ ./
 # Copy built frontend client assets into the server's public folder
 COPY --from=client-builder /app/client/dist ./public
 
-# Expose server port
-EXPOSE 3000
+# Render assigns a dynamic PORT env var
+EXPOSE 5000
 
 # Start server
 CMD ["node", "server.js"]

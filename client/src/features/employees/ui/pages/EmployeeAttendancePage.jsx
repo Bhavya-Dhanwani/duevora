@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { employeesApi } from "../../api/employeesApi";
 import { PageHeader, Button, DataTable, StatusBadge, Modal } from "../../../../app/components/common";
 import useNotification from "../../../../app/components/notification/useNotification";
+import { exportToPdf } from "../../../../lib/exportToPdf";
+import { HiOutlineDocumentArrowDown } from "react-icons/hi2";
 
 const input = { display: "block", boxSizing: "border-box", width: "100%", marginTop: 5, padding: 9, border: "1px solid #cbd5e1", borderRadius: 7 };
 
@@ -56,7 +58,7 @@ export default function EmployeeAttendancePage() {
       <PageHeader
         title="Employee Attendance"
         subtitle="Track daily attendance for your team."
-        action={<Button variant="primary" onClick={() => setIsMarkOpen(true)}>Mark Attendance</Button>}
+        action={<div style={{ display: "flex", gap: 10 }}><Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "Employee Attendance", filename: "employee-attendance", columns: [{ key: "employee", label: "Employee", render: (_, row) => { const emp = employees.find((e) => e._id === row.employeeId); return emp ? `${emp.firstName} ${emp.lastName}` : row.employeeId; } }, { key: "date", label: "Date", render: (v) => v ? new Date(v).toLocaleDateString("en-IN") : "—" }, { key: "status", label: "Status", render: (v) => (v || "—").toUpperCase() }, { key: "checkIn", label: "Check In" }, { key: "checkOut", label: "Check Out" }, { key: "notes", label: "Notes" }], data: [] })}>Export PDF</Button><Button variant="primary" onClick={() => setIsMarkOpen(true)}>Mark Attendance</Button></div>}
       />
 
       <DataTable columns={columns} data={[]} loading={isLoading} emptyTitle="No attendance records" emptyDescription="Start by marking attendance for today." />

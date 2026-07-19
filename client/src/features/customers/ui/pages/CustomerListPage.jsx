@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { HiPlus, HiOutlinePencilSquare, HiOutlineTrash } from "react-icons/hi2";
+import { HiPlus, HiOutlinePencilSquare, HiOutlineTrash, HiOutlineDocumentArrowDown } from "react-icons/hi2";
 import useCustomers from "../../hooks/useCustomers";
 import {
   PageHeader,
@@ -14,6 +14,7 @@ import {
   Avatar,
   AccessDenied,
 } from "../../../../app/components/common";
+import { exportToPdf } from "../../../../lib/exportToPdf";
 import s from "../css/CustomerList.module.css";
 
 const columns = [
@@ -114,9 +115,18 @@ export default function CustomerListPage() {
     <div className={s.page}>
       <PageHeader
         action={
-          <Button icon={HiPlus} onClick={() => navigate("/dashboard/customers/create")} variant="primary">
-            Add Customer
-          </Button>
+          <>
+            <Button
+              variant="secondary"
+              icon={HiOutlineDocumentArrowDown}
+              onClick={() => exportToPdf({ data: items, columns: [{key:"name",label:"Name"},{key:"email",label:"Email"},{key:"phone",label:"Phone"},{key:"status",label:"Status"}], filename: "customers" })}
+            >
+              Export PDF
+            </Button>
+            <Button icon={HiPlus} onClick={() => navigate("/dashboard/customers/create")} variant="primary">
+              Add Customer
+            </Button>
+          </>
         }
         subtitle="Manage your customer profiles and contact information"
         title="Customers"

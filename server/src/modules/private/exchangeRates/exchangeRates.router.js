@@ -18,5 +18,7 @@ const controller = new ExchangeRatesController();
 */
 router.post("/", authMiddleware, permissionMiddleware("exchangeRates.create"), createExchangeRateValidators, controller.createExchangeRate);
 
+router.get("/", authMiddleware, permissionMiddleware("exchangeRates.view"), controller.listExchangeRates);
+
 // exporting the router
 export default router;

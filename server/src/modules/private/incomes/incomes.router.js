@@ -18,5 +18,7 @@ const controller = new IncomesController();
 */
 router.post("/", authMiddleware, permissionMiddleware("incomes.create"), createIncomeValidators, controller.createIncome);
 
+router.get("/", authMiddleware, permissionMiddleware("incomes.view"), controller.listIncomes);
+
 // exporting the router
 export default router;

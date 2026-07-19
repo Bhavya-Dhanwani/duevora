@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { accountingApi } from "../../../accounting/api/accountingApi";
 import { PageHeader, Button, DataTable, Modal } from "../../../../app/components/common";
 import useNotification from "../../../../app/components/notification/useNotification";
+import { exportToPdf } from "../../../../lib/exportToPdf";
+import { HiOutlineDocumentArrowDown } from "react-icons/hi2";
 
 const input = { display: "block", boxSizing: "border-box", width: "100%", marginTop: 5, padding: 9, border: "1px solid #cbd5e1", borderRadius: 7 };
 
@@ -42,7 +44,7 @@ export default function IncomeListPage() {
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-      <PageHeader title="Income" subtitle="Track all business income." action={<Button variant="primary" onClick={() => setIsOpen(true)}>Record Income</Button>} />
+      <PageHeader title="Income" subtitle="Track all business income." action={<div style={{ display: "flex", gap: 10 }}><Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "Income", filename: "income", columns: [{ key: "description", label: "Description" }, { key: "amount", label: "Amount", render: (v) => `₹${Number(v || 0).toLocaleString("en-IN")}` }, { key: "date", label: "Date", render: (v) => v ? new Date(v).toLocaleDateString("en-IN") : "—" }, { key: "createdAt", label: "Recorded", render: (v) => v ? new Date(v).toLocaleDateString("en-IN") : "—" }], data: incomes })}>Export PDF</Button><Button variant="primary" onClick={() => setIsOpen(true)}>Record Income</Button></div>} />
       <DataTable columns={columns} data={incomes} loading={isLoading} emptyTitle="No income records" emptyDescription="Record your first income to get started." />
 
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Record Income">

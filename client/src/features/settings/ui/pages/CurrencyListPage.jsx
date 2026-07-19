@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HiPlus } from "react-icons/hi2";
+import { HiPlus, HiOutlineDocumentArrowDown } from "react-icons/hi2";
 import { settingsApi } from "../../api/settingsApi";
 import { Button, DataTable, Modal, PageHeader } from "../../../../app/components/common";
 import useNotification from "../../../../app/components/notification/useNotification";
+import { exportToPdf } from "../../../../lib/exportToPdf";
 
 const emptyForm = { code: "", name: "", symbol: "" };
 const field = { display: "block", boxSizing: "border-box", width: "100%", marginTop: 6, padding: "9px 10px", border: "1px solid #cbd5e1", borderRadius: 7 };
@@ -37,8 +38,11 @@ export default function CurrencyListPage() {
     <div style={{ maxWidth: 1100, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
         <PageHeader title="Currencies" subtitle="Manage supported currencies." />
-        <Button variant="primary" onClick={() => setOpen(true)}>
-          <HiPlus style={{ marginRight: 6 }} />Add currency
+        <Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "Currencies", filename: "currencies", columns: [{ key: "code", label: "Code" }, { key: "name", label: "Name" }, { key: "symbol", label: "Symbol" }, { key: "status", label: "Status" }], data: items })}>
+          Export PDF
+        </Button>
+        <Button variant="primary" onClick={() => setOpen(true)} icon={HiPlus}>
+          Add currency
         </Button>
       </div>
 

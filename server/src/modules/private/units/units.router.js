@@ -18,5 +18,12 @@ const controller = new UnitsController();
 */
 router.post("/", authMiddleware, permissionMiddleware("units.create"), createUnitValidators, controller.createUnit);
 
+/*
+    @route GET /api/units
+    @desc Get all units for the current organization
+    @access Private (requires units.view permission)
+*/
+router.get("/", authMiddleware, permissionMiddleware("units.view"), controller.listUnits);
+
 // exporting the router
 export default router;

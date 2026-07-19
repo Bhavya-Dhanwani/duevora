@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notificationsApi } from "../../../../features/notifications/api/notificationsApi";
 import { PageHeader, Button } from "../../common";
 import useNotification from "../../notification/useNotification";
+import { exportToPdf } from "../../../../lib/exportToPdf";
+import { HiOutlineDocumentArrowDown } from "react-icons/hi2";
 
 export default function NotificationsPage() {
   const queryClient = useQueryClient();
@@ -33,7 +35,7 @@ export default function NotificationsPage() {
       <PageHeader
         title="Notifications"
         subtitle={unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}` : "All caught up!"}
-        action={unreadCount > 0 ? <Button variant="secondary" onClick={() => markAll.mutate()}>Mark All Read</Button> : undefined}
+        action={<div style={{ display: "flex", gap: 10 }}><Button variant="secondary" onClick={() => exportToPdf({ title: "Notifications", filename: "notifications", columns: [{ key: "title", label: "Title", render: (v, row) => v || row.message || "—" }, { key: "description", label: "Message", render: (v) => v || "—" }, { key: "isRead", label: "Read Status", render: (v) => v ? "Read" : "Unread" }, { key: "createdAt", label: "Date", render: (v) => v ? new Date(v).toLocaleString("en-IN") : "—" }], data: notifications })} icon={HiOutlineDocumentArrowDown}>Export PDF</Button>{unreadCount > 0 ? <Button variant="secondary" onClick={() => markAll.mutate()}>Mark All Read</Button> : undefined}</div>}
       />
 
       {isLoading ? (
