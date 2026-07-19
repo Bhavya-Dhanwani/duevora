@@ -12,6 +12,7 @@ import {
 } from "react-icons/hi2";
 import { useAppSelector } from "../../../../../app/store/hooks";
 import { notificationsApi } from "../../../../notifications/api/notificationsApi";
+import VoiceCommandButton from "../../../../voice/ui/components/jsx/VoiceCommandButton";
 import s from "../css/Topbar.module.css";
 
 export default function Topbar({ isMenuOpen, onMenuOpen, onLogout }) {
@@ -74,6 +75,8 @@ export default function Topbar({ isMenuOpen, onMenuOpen, onLogout }) {
         </label>
 
         <div className={s.actions}>
+          <VoiceCommandButton />
+
           <button className={s.plusBtn} aria-label="Add New" onClick={() => navigate("/dashboard/invoices")} type="button">
             <HiPlus />
           </button>

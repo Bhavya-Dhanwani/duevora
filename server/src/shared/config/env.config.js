@@ -30,6 +30,7 @@ const envSchema = z.object({
     REDIS_HOST: z.string().default(envConstants.REDIS_HOST),
     REDIS_PORT: z.coerce.number().default(envConstants.REDIS_PORT),
     REDIS_PASSWORD: z.string().default(envConstants.REDIS_PASSWORD),
+    GROQ_API_KEY: z.string().default(""),
 });
 
 // parsing and validating environment variables

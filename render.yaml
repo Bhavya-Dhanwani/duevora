@@ -48,5 +48,7 @@ services:
         value: "Duevora <noreply@duevora.com>"
       - key: VITE_GOOGLE_CLIENT_ID
         sync: false
+      - key: GROQ_API_KEY
+        sync: false
     healthCheckPath: /api/health
     autoDeploy: true

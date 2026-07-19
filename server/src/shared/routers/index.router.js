@@ -45,6 +45,7 @@ import notificationsRouter from "../../modules/private/notifications/notificatio
 import auditLogsRouter from "../../modules/private/auditLogs/auditLogs.router.js";
 import settingsRouter from "../../modules/private/settings/settings.router.js";
 import reportsRouter from "../../modules/private/reports/reports.router.js";
+import voiceRouter from "../../modules/private/voice/voice.router.js";
 import contactRouter from "../../modules/public/contact/contact.router.js";
 import webhooksRouter from "../../modules/public/webhooks/webhooks.router.js";
 import healthRouter from "./health.router.js";
@@ -101,6 +102,7 @@ router.use("/notifications", notificationsRouter);
 router.use("/audit-logs", auditLogsRouter);
 router.use("/settings", settingsRouter);
 router.use("/reports", reportsRouter);
+router.use("/voice", voiceRouter);
 
 // exporting the router
 export default router;

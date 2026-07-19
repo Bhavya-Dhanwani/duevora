@@ -10,6 +10,7 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
     "test:dao": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testPathPatterns=\"src/shared/dao/__tests__\"",
     "test:auth": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testPathPatterns=\"modules/private/auth/auth.test\" --forceExit",
+    "test:speech": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testPathPatterns=\"modules/private/voice\" --forceExit",
     "test:organization": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testPathPatterns=\"modules/private/organization\" --forceExit",
     "test:users": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testPathPatterns=\"modules/private/users\" --forceExit",
     "test:employees": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testPathPatterns=\"modules/private/employees\" --forceExit",
@@ -69,16 +70,18 @@
     "express": "^5.2.1",
     "express-validator": "^7.3.2",
     "googleapis": "^173.0.0",
+    "groq-sdk": "^1.3.0",
     "helmet": "^8.3.0",
     "hpp": "^0.2.3",
     "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.4",
     "morgan": "^1.11.0",
+    "multer": "^2.2.0",
     "nodemailer": "^9.0.3",
     "pino": "^10.3.1",
-    "zod": "^4.4.3",
-    "pino-pretty": "^13.1.3"
+    "pino-pretty": "^13.1.3",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "jest": "^30.4.2",
