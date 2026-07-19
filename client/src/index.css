@@ -25,8 +25,38 @@
   --transition-normal: 250ms ease;
 }
 
+html,
+body,
+#root {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   padding: 0;
   background-color: var(--color-bg);
+}
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 23, 42, 0.28) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.2);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-accent);
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }

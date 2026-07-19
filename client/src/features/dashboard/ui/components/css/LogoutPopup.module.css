@@ -1,0 +1,65 @@
+.backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(5px);
+}
+section {
+  width: min(100%, 390px);
+  background: #fff;
+  border-radius: 18px;
+  padding: 28px;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+  animation: pop 0.2s;
+}
+section > svg {
+  font-size: 31px;
+  color: var(--color-accent);
+}
+h2 {
+  margin: 10px 0 6px;
+  color: var(--color-primary);
+}
+p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+section > div {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+section button {
+  flex: 1;
+  border: 0;
+  border-radius: 10px;
+  padding: 11px;
+  cursor: pointer;
+}
+.primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+section > i {
+  border-top: 1px solid var(--color-border);
+  margin: 20px 0 12px;
+}
+.all {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
