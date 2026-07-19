@@ -131,7 +131,10 @@ class ReminderQueueService {
             });
 
             const queueStatus = queueStatusForJobState(state);
-            await this.ReminderModel.updateOne({ _id: normalizedId }, {
+            const persisted = await this.ReminderModel.updateOne({
+                _id: normalizedId,
+                status: { $nin: ["cancelled", "completed", "sent"] },
+            }, {
                 $set: {
                     queueJobId: String(job.id ?? jobId),
                     queueStatus,
@@ -139,6 +142,21 @@ class ReminderQueueService {
                     lastError: null,
                 },
             });
+
+            if (persisted?.matchedCount === 0) {
+                try {
+                    await job.remove();
+                } catch {
+                    this.logger.warn({ reminderId: normalizedId },
+                        "Terminal reminder job could not be removed immediately");
+                }
+
+                return {
+                    jobId: String(job.id ?? jobId),
+                    queueStatus: "removed",
+                    reused,
+                };
+            }
 
             return {
                 jobId: String(job.id ?? jobId),
@@ -217,7 +235,10 @@ class ReminderQueueService {
 
     markQueueFailure = async (reminderId) => {
         try {
-            await this.ReminderModel.updateOne({ _id: reminderId }, {
+            await this.ReminderModel.updateOne({
+                _id: reminderId,
+                status: { $nin: ["cancelled", "completed", "sent"] },
+            }, {
                 $set: {
                     queueStatus: "failed",
                     lastError: QUEUE_UNAVAILABLE_MESSAGE,

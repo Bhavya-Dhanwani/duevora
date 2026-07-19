@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import env from "../config/env.config.js";
+import logger from "../config/logger.config.js";
 import Organization from "../models/organization.model.js";
 import Customer from "../models/customer.model.js";
 import Invoice from "../models/invoice.model.js";
@@ -32,7 +33,8 @@ const CANCELLABLE_REMINDER_STATUSES = [
     "partially_sent",
     "action_required",
 ];
-const LOCK_DURATION_MS = 5 * 60 * 1000;
+// This exceeds one provider call but expires before the default first BullMQ retry.
+const LOCK_DURATION_MS = 45 * 1000;
 
 function safeErrorMessage(channel) {
     return channel === "email" ? "Email delivery failed." : "WhatsApp delivery failed.";
@@ -56,6 +58,13 @@ function sanitizeChannelResult(result = {}) {
         requiresSellerAction: Boolean(result.requiresSellerAction),
         retryable: Boolean(result.retryable),
     };
+}
+
+function createActiveDedupeKey(invoiceId, scheduledFor, channels) {
+    return crypto
+        .createHash("sha256")
+        .update(`${invoiceId}:${scheduledFor.toISOString()}:${channels.join(",")}`)
+        .digest("hex");
 }
 
 function serializeReminder(reminder) {
@@ -151,6 +160,7 @@ class ReminderService {
 
         const scheduledFor = new Date(data.scheduledFor);
         const channels = [...data.channels].sort();
+        const activeDedupeKey = createActiveDedupeKey(invoice._id, scheduledFor, channels);
         const duplicate = await Reminder.findOne({
             organizationId,
             invoiceId: invoice._id,
@@ -169,21 +179,89 @@ class ReminderService {
             invoiceId: invoice._id,
         });
 
-        const reminder = await Reminder.create({
-            organizationId,
-            customerId: customer._id,
-            invoiceId: invoice._id,
-            paymentLinkId: paymentLink.paymentLinkId,
-            title: data.title?.trim() || `Payment reminder for invoice ${invoice.invoiceNumber}`,
-            description: data.description?.trim() || undefined,
-            scheduledFor,
-            channels,
-            status: "scheduled",
-            emailStatus: channels.includes("email") ? "pending" : "skipped",
-            whatsappStatus: channels.includes("whatsapp") ? "pending" : "skipped",
-            maxAttempts: env.REMINDER_JOB_ATTEMPTS,
-            createdBy,
-        });
+        let reminder;
+
+        try {
+            reminder = await Reminder.create({
+                organizationId,
+                customerId: customer._id,
+                invoiceId: invoice._id,
+                paymentLinkId: paymentLink.paymentLinkId,
+                title: data.title?.trim() || `Payment reminder for invoice ${invoice.invoiceNumber}`,
+                description: data.description?.trim() || undefined,
+                scheduledFor,
+                channels,
+                status: "scheduled",
+                emailStatus: channels.includes("email") ? "pending" : "skipped",
+                whatsappStatus: channels.includes("whatsapp") ? "pending" : "skipped",
+                maxAttempts: env.REMINDER_JOB_ATTEMPTS,
+                activeDedupeKey,
+                createdBy,
+            });
+        } catch (error) {
+            if (error?.code === 11000) {
+                throw new Conflict("An active reminder already exists for this schedule and channel selection.");
+            }
+
+            throw error;
+        }
+
+        // A payment may commit while Razorpay link creation is in flight. Recheck
+        // after persistence so no newly paid invoice is left with a queued reminder.
+        const [latestInvoice, latestBalance] = await Promise.all([
+            Invoice.findOne({ _id: invoice._id, organizationId }).lean(),
+            calculateInvoiceBalance({
+                organizationId,
+                invoiceId: invoice._id,
+                invoiceTotal: invoice.grandTotal,
+            }),
+        ]);
+
+        if (latestInvoice?.status === "paid" || latestBalance.outstandingPaise <= 0) {
+            const completed = await Reminder.findByIdAndUpdate(reminder._id, {
+                $set: {
+                    status: "completed",
+                    queueStatus: "completed",
+                    completedAt: new Date(),
+                },
+                $unset: { activeDedupeKey: 1 },
+            }, { returnDocument: "after" });
+
+            return {
+                reminder: serializeReminder(completed),
+                queue: { jobId: null, queueStatus: "completed", reused: false },
+                paymentUrl: null,
+                outstandingAmount: 0,
+            };
+        }
+
+        if (!latestInvoice || !["sent", "partially_paid"].includes(latestInvoice.status)) {
+            await Reminder.updateOne({
+                _id: reminder._id,
+                status: { $nin: ["cancelled", "completed", "sent"] },
+            }, {
+                $set: {
+                    status: "cancelled",
+                    queueStatus: "removed",
+                    cancelledAt: new Date(),
+                },
+                $unset: { activeDedupeKey: 1 },
+            });
+            throw new BadRequest("The invoice is no longer eligible for payment reminders.");
+        }
+
+        let currentPaymentLink = paymentLink;
+
+        if (latestBalance.outstandingPaise !== balance.outstandingPaise) {
+            currentPaymentLink = await this.linkService.createOrReusePaymentLink({
+                organizationId,
+                invoiceId: invoice._id,
+            });
+            reminder.paymentLinkId = currentPaymentLink.paymentLinkId;
+            await Reminder.updateOne({ _id: reminder._id }, {
+                $set: { paymentLinkId: currentPaymentLink.paymentLinkId },
+            });
+        }
 
         try {
             const queueResult = await this.queueService.enqueueReminder({
@@ -199,11 +277,14 @@ class ReminderService {
                     queueStatus: queueResult.queueStatus,
                     reused: queueResult.reused,
                 },
-                paymentUrl: paymentLink.paymentUrl,
-                outstandingAmount: balance.outstandingAmount,
+                paymentUrl: currentPaymentLink.paymentUrl,
+                outstandingAmount: latestBalance.outstandingAmount,
             };
         } catch (error) {
-            await Reminder.updateOne({ _id: reminder._id }, {
+            await Reminder.updateOne({
+                _id: reminder._id,
+                status: { $nin: ["cancelled", "completed", "sent"] },
+            }, {
                 $set: {
                     queueStatus: "failed",
                     lastError: "Reminder queue is temporarily unavailable.",
@@ -267,12 +348,16 @@ class ReminderService {
         });
 
         if (invoice.status === "paid" || balance.outstandingPaise <= 0) {
-            reminder.status = "completed";
-            reminder.queueStatus = "completed";
-            reminder.completedAt = new Date();
-            reminder.processingLockUntil = undefined;
-            reminder.processingBy = undefined;
-            await reminder.save();
+            reminder = await Reminder.findOneAndUpdate(filter, {
+                $set: {
+                    status: "completed",
+                    queueStatus: "completed",
+                    completedAt: new Date(),
+                    processingLockUntil: null,
+                    processingBy: null,
+                },
+                $unset: { activeDedupeKey: 1 },
+            }, { returnDocument: "after" });
 
             return {
                 skipped: true,
@@ -336,13 +421,13 @@ class ReminderService {
                 .find((result) => result.status === "failed")?.safeError;
             const finishedAt = new Date();
 
-            const updated = await Reminder.findOneAndUpdate({
-                _id: reminder._id,
-                processingBy,
-            }, {
+            const finalUpdate = {
                 $set: {
                     status: finalState,
                     queueStatus: retryableFailure ? "failed" : "completed",
+                    emailStatus: reminder.emailStatus,
+                    whatsappStatus: reminder.whatsappStatus,
+                    whatsappDeepLink: reminder.whatsappDeepLink,
                     sentAt: ["sent", "partially_sent", "action_required"].includes(finalState)
                         ? finishedAt
                         : reminder.sentAt,
@@ -353,7 +438,16 @@ class ReminderService {
                     processingLockUntil: null,
                     processingBy: null,
                 },
-            }, {
+            };
+
+            if (finalState === "sent") {
+                finalUpdate.$unset = { activeDedupeKey: 1 };
+            }
+
+            const updated = await Reminder.findOneAndUpdate({
+                _id: reminder._id,
+                processingBy,
+            }, finalUpdate, {
                 returnDocument: "after",
                 runValidators: true,
             });
@@ -431,6 +525,7 @@ class ReminderService {
                 processingLockUntil: null,
                 processingBy: null,
             },
+            $unset: { activeDedupeKey: 1 },
         }, {
             returnDocument: "after",
             runValidators: true,
@@ -462,10 +557,49 @@ class ReminderService {
             throw new BadRequest(`A ${reminder.status} reminder cannot be sent.`);
         }
 
-        const paymentLink = await PaymentLink.findOne({
-            _id: reminder.paymentLinkId,
+        const invoice = await Invoice.findOne({
+            _id: reminder.invoiceId,
             organizationId,
-        }).select("shortUrl");
+        });
+
+        if (!invoice || !["sent", "partially_paid", "paid"].includes(invoice.status)) {
+            throw new BadRequest("The invoice is no longer eligible for payment reminders.");
+        }
+
+        const balance = await calculateInvoiceBalance({
+            organizationId,
+            invoiceId: invoice._id,
+            invoiceTotal: invoice.grandTotal,
+        });
+
+        if (invoice.status === "paid" || balance.outstandingPaise <= 0) {
+            await Reminder.updateOne({ _id: reminder._id, organizationId }, {
+                $set: {
+                    status: "completed",
+                    queueStatus: "completed",
+                    completedAt: new Date(),
+                },
+                $unset: { activeDedupeKey: 1 },
+            });
+            await Promise.allSettled([
+                this.queueService.removeReminderJob(reminder._id.toString()),
+            ]);
+
+            return {
+                reminderId: reminder._id,
+                jobId: null,
+                queueStatus: "completed",
+                paymentUrl: null,
+            };
+        }
+
+        const paymentLink = await this.linkService.createOrReusePaymentLink({
+            organizationId,
+            invoiceId: invoice._id,
+        });
+        await Reminder.updateOne({ _id: reminder._id, organizationId }, {
+            $set: { paymentLinkId: paymentLink.paymentLinkId },
+        });
         const queue = await this.queueService.enqueueImmediateReminder(reminder._id.toString());
         const current = await Reminder.findById(reminder._id);
 
@@ -473,7 +607,7 @@ class ReminderService {
             reminderId: reminder._id,
             jobId: queue.jobId,
             queueStatus: current?.queueStatus || "queued",
-            paymentUrl: paymentLink?.shortUrl,
+            paymentUrl: paymentLink.paymentUrl,
         };
     };
 
@@ -543,6 +677,7 @@ class ReminderService {
                     processingLockUntil: null,
                     processingBy: null,
                 },
+                $unset: { activeDedupeKey: 1 },
             }, { session });
         }
 
@@ -617,6 +752,27 @@ class ReminderService {
     deliverEmail = async ({ reminder, context, processingBy }) => {
         if (reminder.emailStatus === "sent") return { status: "sent", alreadyDelivered: true };
 
+        const priorDelivery = await ReminderDelivery.findOne({
+            reminderId: reminder._id,
+            channel: "email",
+            status: "sent",
+        }).sort({ attemptNumber: -1 });
+
+        if (priorDelivery) {
+            await Reminder.updateOne({ _id: reminder._id, processingBy }, {
+                $set: {
+                    emailStatus: "sent",
+                    emailProviderMessageId: priorDelivery.providerMessageId,
+                },
+            });
+            reminder.emailStatus = "sent";
+            return {
+                status: "sent",
+                providerMessageId: priorDelivery.providerMessageId,
+                alreadyDelivered: true,
+            };
+        }
+
         const attemptNumber = reminder.attempts;
         const delivery = await this.claimDelivery({
             reminder,
@@ -630,7 +786,10 @@ class ReminderService {
             return { status: delivery.status, providerMessageId: delivery.providerMessageId };
         }
 
+        let providerMessageId;
+
         try {
+            await this.renewProcessingLock(reminder._id, processingBy);
             const email = buildPaymentReminderEmail({
                 organization: context.organization,
                 customer: context.customer,
@@ -639,26 +798,14 @@ class ReminderService {
                 outstandingAmount: context.balance.outstandingAmount,
                 paymentUrl: context.paymentUrl,
             });
-            const providerMessageId = await this.mailer(
+            providerMessageId = await this.mailer(
                 context.customer.email,
                 email.subject,
                 email.html,
                 { text: email.text }
             );
-
-            await Promise.all([
-                ReminderDelivery.updateOne({ _id: delivery._id }, {
-                    $set: { status: "sent", providerMessageId, completedAt: new Date() },
-                }),
-                Reminder.updateOne({ _id: reminder._id, processingBy }, {
-                    $set: { emailStatus: "sent", emailProviderMessageId: providerMessageId },
-                }),
-            ]);
-
-            reminder.emailStatus = "sent";
-            return { status: "sent", providerMessageId };
         } catch {
-            await Promise.all([
+            await Promise.allSettled([
                 ReminderDelivery.updateOne({ _id: delivery._id }, {
                     $set: {
                         status: "failed",
@@ -679,6 +826,25 @@ class ReminderService {
                 safeError: safeErrorMessage("email"),
             };
         }
+
+        const persistenceResults = await Promise.allSettled([
+            ReminderDelivery.updateOne({ _id: delivery._id }, {
+                $set: { status: "sent", providerMessageId, completedAt: new Date() },
+            }),
+            Reminder.updateOne({ _id: reminder._id, processingBy }, {
+                $set: { emailStatus: "sent", emailProviderMessageId: providerMessageId },
+            }),
+        ]);
+
+        if (persistenceResults.some((result) => result.status === "rejected")) {
+            logger.warn({ reminderId: reminder._id.toString(), channel: "email" },
+                "Reminder delivery state was only partially persisted");
+        }
+
+        // The final reminder update in sendReminder is a second durable write.
+        // A successful audit row can also reconcile the channel on a later retry.
+        reminder.emailStatus = "sent";
+        return { status: "sent", providerMessageId };
     };
 
     deliverWhatsApp = async ({ reminder, context, processingBy }) => {
@@ -687,6 +853,29 @@ class ReminderService {
                 status: reminder.whatsappStatus,
                 deeplink: reminder.whatsappDeepLink,
                 requiresSellerAction: reminder.whatsappStatus === "link_generated",
+            };
+        }
+
+        const priorDelivery = await ReminderDelivery.findOne({
+            reminderId: reminder._id,
+            channel: "whatsapp",
+            status: { $in: ["sent", "link_generated", "skipped"] },
+        }).sort({ attemptNumber: -1 });
+
+        if (priorDelivery) {
+            await Reminder.updateOne({ _id: reminder._id, processingBy }, {
+                $set: {
+                    whatsappStatus: priorDelivery.status,
+                    whatsappProviderMessageId: priorDelivery.providerMessageId,
+                },
+            });
+            reminder.whatsappStatus = priorDelivery.status;
+            return {
+                status: priorDelivery.status,
+                providerMessageId: priorDelivery.providerMessageId,
+                deeplink: reminder.whatsappDeepLink,
+                requiresSellerAction: priorDelivery.status === "link_generated",
+                alreadyDelivered: true,
             };
         }
 
@@ -712,6 +901,7 @@ class ReminderService {
         let result;
 
         try {
+            await this.renewProcessingLock(reminder._id, processingBy);
             result = await this.whatsApp.sendReminder({
                 organization: context.organization,
                 customer: context.customer,
@@ -732,7 +922,7 @@ class ReminderService {
             ? "link_generated"
             : status === "sent" ? "sent" : status === "skipped" ? "skipped" : "failed";
 
-        await Promise.all([
+        const persistenceResults = await Promise.allSettled([
             ReminderDelivery.updateOne({ _id: delivery._id }, {
                 $set: {
                     status: reminderStatus,
@@ -754,12 +944,35 @@ class ReminderService {
             }),
         ]);
 
+        if (persistenceResults.some((writeResult) => writeResult.status === "rejected")) {
+            logger.warn({ reminderId: reminder._id.toString(), channel: "whatsapp" },
+                "Reminder delivery state was only partially persisted");
+        }
+
         reminder.whatsappStatus = reminderStatus;
         reminder.whatsappDeepLink = result.deeplink;
         return {
             ...result,
             safeError: status === "failed" ? safeErrorMessage("whatsapp") : undefined,
         };
+    };
+
+    renewProcessingLock = async (reminderId, processingBy) => {
+        const result = await Reminder.updateOne({
+            _id: reminderId,
+            status: "processing",
+            processingBy,
+        }, {
+            $set: {
+                processingLockUntil: new Date(Date.now() + LOCK_DURATION_MS),
+            },
+        });
+
+        if (result.matchedCount === 0) {
+            const error = new Conflict("Reminder delivery lock is no longer active.");
+            error.retryable = true;
+            throw error;
+        }
     };
 
     claimDelivery = async ({ reminder, channel, attemptNumber, provider, destinationMasked }) => {
@@ -820,5 +1033,11 @@ const completePaidInvoiceReminders = async (options) => (
     await reminderService.completePaidInvoiceReminders(options)
 );
 
-export { ReminderService, completePaidInvoiceReminders, serializeReminder };
+export {
+    LOCK_DURATION_MS,
+    ReminderService,
+    completePaidInvoiceReminders,
+    createActiveDedupeKey,
+    serializeReminder,
+};
 export default reminderService;

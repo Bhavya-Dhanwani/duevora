@@ -47,8 +47,10 @@ const { default: Customer } = await import("../../../shared/models/customer.mode
 const { default: Invoice } = await import("../../../shared/models/invoice.model.js");
 const { default: Organization } = await import("../../../shared/models/organization.model.js");
 const { default: PaymentLink } = await import("../../../shared/models/paymentLink.model.js");
+const { default: Receipt } = await import("../../../shared/models/receipt.model.js");
 const { default: Reminder } = await import("../../../shared/models/reminder.model.js");
 const { default: ReminderDelivery } = await import("../../../shared/models/reminderDelivery.model.js");
+const { LOCK_DURATION_MS } = await import("../../../shared/services/reminder.service.js");
 
 let app;
 let mongoServer;
@@ -84,7 +86,7 @@ async function createReminder(channels = ["email"], overrides = {}) {
 beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
     await mongoose.connect(mongoServer.getUri());
-    await Promise.all([PaymentLink.syncIndexes(), ReminderDelivery.syncIndexes()]);
+    await Promise.all([PaymentLink.syncIndexes(), Reminder.syncIndexes(), ReminderDelivery.syncIndexes()]);
     app = createApp();
 });
 
@@ -141,6 +143,10 @@ beforeEach(async () => {
 });
 
 describe("Payment reminders API", () => {
+    it("expires abandoned processing locks before the first configured retry", () => {
+        expect(LOCK_DURATION_MS).toBeLessThan(env.REMINDER_JOB_BACKOFF_MS);
+    });
+
     it("creates a scheduled email reminder and enqueues one delayed job", async () => {
         const response = await createReminder(["email"]);
 
@@ -206,6 +212,57 @@ describe("Payment reminders API", () => {
         expect(duplicateSchedule.status).toBe(409);
         expect(duplicateChannels.status).toBe(400);
         expect(await Reminder.countDocuments({ invoiceId: invoice._id })).toBe(1);
+    });
+
+    it("uses the database fingerprint to reject simultaneous duplicate schedules", async () => {
+        mockCreatePaymentLink.mockImplementationOnce(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 75));
+            return {
+                id: "plink_reminder_concurrent",
+                short_url: "https://rzp.io/i/reminder-concurrent",
+                status: "created",
+                created_at: 1784428200,
+            };
+        });
+
+        const [first, second] = await Promise.all([
+            createReminder(["email"]),
+            createReminder(["email"]),
+        ]);
+
+        expect([first.status, second.status].sort()).toEqual([201, 409]);
+        expect(await Reminder.countDocuments({ invoiceId: invoice._id })).toBe(1);
+        expect(mockEnqueueReminder).toHaveBeenCalledTimes(1);
+    });
+
+    it("completes without queueing when payment lands during reminder creation", async () => {
+        mockCreatePaymentLink.mockImplementationOnce(async () => {
+            await Receipt.create({
+                organizationId: organization._id,
+                customerId: customer._id,
+                invoiceId: invoice._id,
+                receiptNumber: "REC-DURING-REMINDER-CREATE",
+                receiptDate: new Date(),
+                amount: 1180,
+                paymentMethod: "razorpay",
+                accountId: new mongoose.Types.ObjectId(),
+            });
+            await Invoice.updateOne({ _id: invoice._id }, { $set: { status: "paid" } });
+            return {
+                id: "plink_paid_during_create",
+                short_url: "https://rzp.io/i/paid-during-create",
+                status: "created",
+                created_at: 1784428200,
+            };
+        });
+
+        const response = await createReminder(["email"]);
+
+        expect(response.status).toBe(201);
+        expect(response.body.data.reminder.status).toBe("completed");
+        expect(response.body.data.queue.queueStatus).toBe("completed");
+        expect(response.body.data.paymentUrl).toBeNull();
+        expect(mockEnqueueReminder).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -312,6 +369,36 @@ describe("Payment reminders API", () => {
         expect(mockSendMail).not.toHaveBeenCalled();
     });
 
+    it("reconciles a sent delivery audit without calling SMTP again", async () => {
+        const created = await createReminder(["email"]);
+        const reminderId = created.body.data.reminder.reminderId;
+        await Reminder.updateOne({ _id: reminderId }, {
+            $set: { status: "failed", emailStatus: "failed", attempts: 1 },
+        });
+        await ReminderDelivery.create({
+            organizationId: organization._id,
+            reminderId,
+            channel: "email",
+            attemptNumber: 1,
+            status: "sent",
+            provider: "mock_smtp",
+            providerMessageId: "smtp-already-accepted",
+            destinationMasked: "a***@example.com",
+            startedAt: new Date(),
+            completedAt: new Date(),
+        });
+        mockSendMail.mockClear();
+
+        const response = await request(app)
+            .post(`/api/reminders/${reminderId}/send?wait=true`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.emailResult.status).toBe("sent");
+        expect(mockSendMail).not.toHaveBeenCalled();
+        expect((await Reminder.findById(reminderId)).emailStatus).toBe("sent");
+    });
+
     it("queues Send Now using the deterministic reminder job", async () => {
         const created = await createReminder(["email"]);
         const reminderId = created.body.data.reminder.reminderId;
@@ -323,6 +410,37 @@ describe("Payment reminders API", () => {
         expect(response.status).toBe(200);
         expect(response.body.data.jobId).toBe("reminder-immediate");
         expect(response.body.data.paymentUrl).toBe("https://rzp.io/i/reminder-link");
+        expect(mockEnqueueImmediateReminder).toHaveBeenCalledWith(reminderId);
+    });
+
+    it("refreshes a stale PaymentLink before queueing Send Now", async () => {
+        const created = await createReminder(["email"]);
+        const reminderId = created.body.data.reminder.reminderId;
+        await Receipt.create({
+            organizationId: organization._id,
+            customerId: customer._id,
+            invoiceId: invoice._id,
+            receiptNumber: "REC-BEFORE-SEND-NOW",
+            receiptDate: new Date(),
+            amount: 180,
+            paymentMethod: "bank",
+            accountId: new mongoose.Types.ObjectId(),
+        });
+        await Invoice.updateOne({ _id: invoice._id }, { $set: { status: "partially_paid" } });
+        mockCreatePaymentLink.mockResolvedValueOnce({
+            id: "plink_reminder_refreshed",
+            short_url: "https://rzp.io/i/reminder-refreshed",
+            status: "created",
+            created_at: 1784428300,
+        });
+
+        const response = await request(app)
+            .post(`/api/reminders/${reminderId}/send`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.paymentUrl).toBe("https://rzp.io/i/reminder-refreshed");
+        expect(mockCancelPaymentLink).toHaveBeenCalledWith("plink_reminder_1");
         expect(mockEnqueueImmediateReminder).toHaveBeenCalledWith(reminderId);
     });
 

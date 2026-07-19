@@ -62,6 +62,13 @@ describe("Reminder model", () => {
             nextAttemptAt: 1,
             processingLockUntil: 1,
         })).toBe(true);
+        expect(hasIndex(Reminder, {
+            organizationId: 1,
+            activeDedupeKey: 1,
+        }, {
+            unique: true,
+            partialFilterExpression: { activeDedupeKey: { $type: "string" } },
+        })).toBe(true);
     });
 });
 

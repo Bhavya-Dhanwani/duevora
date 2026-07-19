@@ -160,7 +160,10 @@ describe("ReminderQueueService", () => {
         );
         expect(Object.keys(context.queue.add.mock.calls[0][1])).toEqual(["reminderId"]);
         expect(context.ReminderModel.updateOne).toHaveBeenCalledWith(
-            { _id: reminderId },
+            {
+                _id: reminderId,
+                status: { $nin: ["cancelled", "completed", "sent"] },
+            },
             { $set: expect.objectContaining({
                 queueJobId: `reminder-${reminderId}`,
                 queueStatus: "queued",
@@ -170,6 +173,23 @@ describe("ReminderQueueService", () => {
         expect(result).toEqual({
             jobId: `reminder-${reminderId}`,
             queueStatus: "queued",
+            reused: false,
+        });
+    });
+
+    it("removes a job added concurrently with terminal reminder completion", async () => {
+        const context = setup();
+        context.ReminderModel.updateOne.mockResolvedValueOnce({ matchedCount: 0 });
+
+        const result = await context.service.enqueueReminder({
+            reminderId,
+            scheduledFor: now,
+        });
+
+        expect(context.addedJob.remove).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({
+            jobId: `reminder-${reminderId}`,
+            queueStatus: "removed",
             reused: false,
         });
     });
@@ -237,7 +257,10 @@ describe("ReminderQueueService", () => {
         await expect(context.service.enqueueReminder({ reminderId, scheduledFor: now }))
             .rejects.toThrow(ServiceUnavailable);
         expect(context.ReminderModel.updateOne).toHaveBeenLastCalledWith(
-            { _id: reminderId },
+            {
+                _id: reminderId,
+                status: { $nin: ["cancelled", "completed", "sent"] },
+            },
             { $set: {
                 queueStatus: "failed",
                 lastError: "Reminder scheduling is temporarily unavailable.",
@@ -271,9 +294,12 @@ describe("ReminderQueueService", () => {
             .rejects.toMatchObject({
                 statusCode: 503,
                 message: "Reminder scheduling is temporarily unavailable.",
-            });
+        });
         expect(ReminderModel.updateOne).toHaveBeenCalledWith(
-            { _id: reminderId },
+            {
+                _id: reminderId,
+                status: { $nin: ["cancelled", "completed", "sent"] },
+            },
             { $set: {
                 queueStatus: "failed",
                 lastError: "Reminder scheduling is temporarily unavailable.",

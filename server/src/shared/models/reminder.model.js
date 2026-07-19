@@ -200,6 +200,15 @@ const reminderSchema = new mongoose.Schema({
         set: sanitizeLastError,
     },
 
+    // This internal fingerprint is present only while a reminder is active,
+    // allowing MongoDB to reject concurrent duplicate scheduling requests.
+    activeDedupeKey: {
+        type: String,
+        trim: true,
+        maxlength: 64,
+        select: false,
+    },
+
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
@@ -214,6 +223,13 @@ reminderSchema.index({ organizationId: 1, customerId: 1 });
 reminderSchema.index({ paymentLinkId: 1 });
 reminderSchema.index({ queueStatus: 1, scheduledFor: 1 });
 reminderSchema.index({ status: 1, nextAttemptAt: 1, processingLockUntil: 1 });
+reminderSchema.index(
+    { organizationId: 1, activeDedupeKey: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { activeDedupeKey: { $type: "string" } },
+    }
+);
 
 const Reminder = mongoose.model("Reminder", reminderSchema);
 
