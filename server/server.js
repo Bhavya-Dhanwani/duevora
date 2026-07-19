@@ -3,19 +3,37 @@ import createApp from "./src/app.js";
 import connectDB from "./src/shared/config/db.config.js";
 import logger from "./src/shared/config/logger.config.js";
 import env from "./src/shared/config/env.config.js";
+import mongoose from "mongoose";
 
 // function to start the server
-function startServer() {
+async function startServer() {
 
-    // making the app
-    const app = createApp();
+    try {
+        // The database is authoritative for every authenticated request.
+        await connectDB();
 
-    connectDB();
+        // making the app
+        const app = createApp();
 
-    // starting the server
-    app.listen(env.PORT, () => {
-        logger.info(`Server is running on port ${env.PORT}`);
-    });
+        // starting the server
+        const server = app.listen(env.PORT, () => {
+            logger.info({ port: env.PORT }, "Server is running");
+        });
+
+        const shutdown = async (signal) => {
+            logger.info({ signal }, "Shutting down server");
+            server.close(async () => {
+                await mongoose.connection.close();
+                process.exit(0);
+            });
+        };
+
+        process.once("SIGINT", () => shutdown("SIGINT"));
+        process.once("SIGTERM", () => shutdown("SIGTERM"));
+    } catch (error) {
+        logger.fatal({ errorName: error.name }, "Server startup failed");
+        process.exit(1);
+    }
 
 }
 

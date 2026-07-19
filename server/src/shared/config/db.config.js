@@ -7,17 +7,14 @@ import logger from "./logger.config.js";
 async function connectDB() {
 
     try {
-
-        // connecting to the database
-        await mongoose.connect(env.MONGO_URI);
+        // The HTTP server must not accept traffic until this promise resolves.
+        const connection = await mongoose.connect(env.MONGO_URI);
         logger.info("Connected to the database");
-
-    }
-    catch (error) {
-
-        // logging the error
-        logger.error("Error connecting to the database:", error);
-
+        return connection;
+    } catch (error) {
+        // Connection errors can contain credential-bearing URIs, so log only safe metadata.
+        logger.error({ errorName: error.name }, "Unable to connect to the database");
+        throw error;
     }
 
 }
