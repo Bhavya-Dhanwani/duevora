@@ -1,6 +1,6 @@
-import Reminder from "../models/reminder.model.js";
+import ReminderDelivery from "../models/reminderDelivery.model.js";
 
-const DEFAULT_POPULATE = "organizationId customerId invoiceId paymentLinkId createdBy";
+const DEFAULT_POPULATE = "organizationId reminderId";
 
 function isMongoSession(value) {
     return Boolean(value && typeof value === "object" && typeof value.inTransaction === "function");
@@ -57,14 +57,14 @@ function applyReadOptions(query, options, session) {
     return applyPopulate(query, options);
 }
 
-class ReminderDao {
+class ReminderDeliveryDao {
     constructor() {
-        this.Model = Reminder;
+        this.Model = ReminderDelivery;
     }
 
     async create(data, session = null) {
-        const reminder = new this.Model(data);
-        return await reminder.save({ session });
+        const delivery = new this.Model(data);
+        return await delivery.save({ session });
     }
 
     async findById(id, optionsOrSession = {}, session = null) {
@@ -101,22 +101,6 @@ class ReminderDao {
         return await this.Model.findByIdAndDelete(id, { session });
     }
 
-    async findByIdForOrganization(id, organizationId, optionsOrSession = {}, session = null) {
-        return await this.findOne(
-            { _id: id, organizationId },
-            optionsOrSession,
-            session
-        );
-    }
-
-    async findOneForOrganization(organizationId, filter = {}, optionsOrSession = {}, session = null) {
-        return await this.findOne(
-            { ...filter, organizationId },
-            optionsOrSession,
-            session
-        );
-    }
-
     async findForOrganization(organizationId, filter = {}, options = {}, session = null) {
         return await this.find(
             { ...filter, organizationId },
@@ -124,28 +108,6 @@ class ReminderDao {
             session
         );
     }
-
-    async updateByIdForOrganization(
-        id,
-        organizationId,
-        updateData,
-        optionsOrSession = {},
-        session = null
-    ) {
-        const read = normalizeReadOptions(optionsOrSession, session);
-        let query = this.Model.findOneAndUpdate(
-            { _id: id, organizationId },
-            updateData,
-            {
-                returnDocument: "after",
-                runValidators: true,
-                session: read.session,
-            }
-        );
-
-        query = applyPopulate(query, read.options);
-        return await query;
-    }
 }
 
-export default ReminderDao;
+export default ReminderDeliveryDao;
