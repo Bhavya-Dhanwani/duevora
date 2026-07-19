@@ -1,0 +1,99 @@
+.tableWrap {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.table {
+  display: grid;
+  min-width: 100%;
+}
+
+.header {
+  display: contents;
+}
+
+.header .cell {
+  background: var(--color-input-bg);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.header .cell svg {
+  font-size: 14px;
+}
+
+.row {
+  display: contents;
+}
+
+.row .cell {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row:last-child .cell {
+  border-bottom: none;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover .cell {
+  background: rgba(37, 99, 235, 0.02);
+}
+
+.alignRight {
+  justify-content: flex-end;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.actionsCell {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.footer {
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 768px) {
+  .table {
+    overflow-x: auto;
+  }
+
+  .header .cell,
+  .row .cell {
+    min-width: 120px;
+  }
+}

@@ -1,0 +1,42 @@
+.nav {
+  margin-bottom: 20px;
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.link {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.link:hover {
+  color: var(--color-accent);
+}
+
+.current {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.sep {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}

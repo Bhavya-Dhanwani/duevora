@@ -1,0 +1,34 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.left {
+  flex: 1;
+  min-width: 0;
+  max-width: 400px;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterIcon {
+  font-size: 18px;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 640px) {
+  .bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .left {
+    max-width: none;
+  }
+}

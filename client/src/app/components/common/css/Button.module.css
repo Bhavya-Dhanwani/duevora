@@ -1,0 +1,105 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Sizes */
+.sm {
+  height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+.md {
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+}
+
+.lg {
+  height: 48px;
+  padding: 0 24px;
+  font-size: 15px;
+}
+
+/* Variants */
+.primary {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.primary:hover:not(:disabled) {
+  background: #1e293b;
+}
+
+.secondary {
+  background: var(--color-card);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--color-input-bg);
+  border-color: #d1d5db;
+}
+
+.danger {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+}
+
+.danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
