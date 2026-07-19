@@ -51,7 +51,7 @@ export default function Navbar() {
 					/>
 
 					<p className="font-helveticaNeue text-sm uppercase tracking-tight text-white">
-						AI Finance Assistant
+						Your AI Business Copilot
 					</p>
 				</div>
 
