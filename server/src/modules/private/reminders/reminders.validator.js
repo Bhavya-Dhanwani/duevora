@@ -1,49 +1,106 @@
-// Importing modules
-import { body } from "express-validator";
-import validateErrors from "../../../shared/utils/validateErrors.util.js";
 import mongoose from "mongoose";
+import { body, param, query } from "express-validator";
+import validateErrors from "../../../shared/utils/validateErrors.util.js";
+
+const REMINDER_STATUSES = [
+    "scheduled",
+    "queued",
+    "processing",
+    "sent",
+    "partially_sent",
+    "action_required",
+    "failed",
+    "completed",
+    "cancelled",
+];
+const CHANNELS = ["email", "whatsapp"];
+
+const objectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 const createReminderValidators = [
-
-    // validating the title field
-    body("title")
-        .notEmpty()
-        .withMessage("Reminder title is required")
-        .isString(),
-
-    // validating the dueDate field
-    body("dueDate")
-        .notEmpty()
-        .withMessage("Due date is required")
-        .isISO8601()
-        .withMessage("Due date must be a valid ISO 8601 date"),
-
-    // validating the status field
-    body("status")
-        .optional()
-        .isIn(["pending", "completed"])
-        .withMessage("Invalid status"),
-
-    // validating the invoiceId field
     body("invoiceId")
-        .optional()
-        .custom((v) => v === null || mongoose.Types.ObjectId.isValid(v))
+        .notEmpty()
+        .withMessage("Invoice ID is required")
+        .custom(objectId)
         .withMessage("Invalid Invoice ID"),
-
-    // validating the paymentId field
-    body("paymentId")
+    body("scheduledFor")
+        .notEmpty()
+        .withMessage("Scheduled time is required")
+        .isISO8601({ strict: true })
+        .withMessage("Scheduled time must be a valid ISO 8601 date"),
+    body("channels")
+        .isArray({ min: 1 })
+        .withMessage("At least one reminder channel is required")
+        .custom((channels) => channels.every((channel) => CHANNELS.includes(channel)))
+        .withMessage("Reminder channels must be email or whatsapp")
+        .custom((channels) => new Set(channels).size === channels.length)
+        .withMessage("Reminder channels must be unique"),
+    body("title")
         .optional()
-        .custom((v) => v === null || mongoose.Types.ObjectId.isValid(v))
-        .withMessage("Invalid Payment ID"),
-
-    // validating the description field
+        .trim()
+        .isString()
+        .isLength({ min: 1, max: 200 })
+        .withMessage("Title must contain 1 to 200 characters"),
     body("description")
         .optional()
-        .isString(),
-
-    // validating errors
-    validateErrors
-
+        .trim()
+        .isString()
+        .isLength({ max: 2000 })
+        .withMessage("Description must contain at most 2000 characters"),
+    body("customerId")
+        .not()
+        .exists()
+        .withMessage("Customer ID is derived from the invoice"),
+    body("paymentId")
+        .not()
+        .exists()
+        .withMessage("Outgoing payment references are not valid for invoice reminders"),
+    body("status")
+        .not()
+        .exists()
+        .withMessage("Reminder status is managed by the server"),
+    validateErrors,
 ];
 
-export { createReminderValidators };
+const reminderIdValidators = [
+    param("reminderId")
+        .custom(objectId)
+        .withMessage("Invalid Reminder ID"),
+    validateErrors,
+];
+
+const sendReminderValidators = [
+    param("reminderId")
+        .custom(objectId)
+        .withMessage("Invalid Reminder ID"),
+    query("wait")
+        .optional()
+        .isBoolean()
+        .withMessage("wait must be true or false")
+        .toBoolean(),
+    validateErrors,
+];
+
+const listReminderValidators = [
+    query("page").optional().isInt({ min: 1 }).withMessage("page must be a positive integer").toInt(),
+    query("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100").toInt(),
+    query("status").optional().isIn(REMINDER_STATUSES).withMessage("Invalid reminder status"),
+    query("invoiceId").optional().custom(objectId).withMessage("Invalid Invoice ID"),
+    query("customerId").optional().custom(objectId).withMessage("Invalid Customer ID"),
+    query("channel").optional().isIn(CHANNELS).withMessage("Invalid reminder channel"),
+    query("scheduledFrom").optional().isISO8601({ strict: true }).withMessage("Invalid scheduledFrom date"),
+    query("scheduledTo").optional().isISO8601({ strict: true }).withMessage("Invalid scheduledTo date"),
+    query("sortBy")
+        .optional()
+        .isIn(["scheduledFor", "createdAt", "status"])
+        .withMessage("Invalid sort field"),
+    query("sortOrder").optional().isIn(["asc", "desc"]).withMessage("sortOrder must be asc or desc"),
+    validateErrors,
+];
+
+export {
+    createReminderValidators,
+    listReminderValidators,
+    reminderIdValidators,
+    sendReminderValidators,
+};

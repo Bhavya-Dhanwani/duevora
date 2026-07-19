@@ -1,39 +1,66 @@
-// Importing modules
-import ReminderDao from "../../../shared/dao/reminder.dao.js";
-
+import reminderService from "../../../shared/services/reminder.service.js";
 import Created from "../../../shared/responses/Created.response.js";
+import Ok from "../../../shared/responses/Ok.response.js";
 
-// class to handle reminder operations
 class RemindersController {
 
-    constructor() {
-
-        // initializing the reminder dao
-        this.reminderDao = new ReminderDao();
-
-    }
-
-    // create a new reminder
     createReminder = async (req, res) => {
-
-        const { title, dueDate, status, invoiceId, paymentId, description } = req.body;
-        const organizationId = req.user.organizationId;
-
-        // creating reminder record using reminder dao
-        const reminder = await this.reminderDao.create({
-            organizationId,
-            title: title.trim(),
-            dueDate: new Date(dueDate),
-            status: status || "pending",
-            invoiceId: invoiceId || undefined,
-            paymentId: paymentId || undefined,
-            description: description || undefined
+        const result = await reminderService.createReminder({
+            organizationId: req.user.organizationId,
+            createdBy: req.user.userId || req.user._id,
+            data: req.body,
         });
 
-        // returning the created reminder
-        return Created(res, "Reminder created successfully", reminder);
+        return Created(res, "Reminder scheduled successfully", result);
+    };
 
-    }
+    listReminders = async (req, res) => {
+        const result = await reminderService.listReminders({
+            organizationId: req.user.organizationId,
+            filters: req.query,
+        });
+
+        return Ok(res, "Reminders retrieved successfully", result);
+    };
+
+    getReminder = async (req, res) => {
+        const reminder = await reminderService.getReminder({
+            organizationId: req.user.organizationId,
+            reminderId: req.params.reminderId,
+        });
+
+        return Ok(res, "Reminder retrieved successfully", reminder);
+    };
+
+    sendReminder = async (req, res) => {
+        const shouldWait = req.query.wait === true || req.query.wait === "true";
+
+        const result = shouldWait
+            ? await reminderService.sendReminder({
+                organizationId: req.user.organizationId,
+                reminderId: req.params.reminderId,
+                source: "manual",
+            })
+            : await reminderService.enqueueImmediateReminder({
+                organizationId: req.user.organizationId,
+                reminderId: req.params.reminderId,
+            });
+
+        return Ok(
+            res,
+            shouldWait ? "Reminder processed" : "Reminder queued for immediate delivery",
+            result
+        );
+    };
+
+    cancelReminder = async (req, res) => {
+        const reminder = await reminderService.cancelReminder({
+            organizationId: req.user.organizationId,
+            reminderId: req.params.reminderId,
+        });
+
+        return Ok(res, "Reminder cancelled successfully", reminder);
+    };
 
 }
 

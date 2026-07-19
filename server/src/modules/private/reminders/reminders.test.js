@@ -1,23 +1,90 @@
 import { jest } from "@jest/globals";
+import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import request from "supertest";
 
+process.env.WHATSAPP_MODE = "deeplink";
+process.env.SEND_MAIL = "false";
+
+const mockCreatePaymentLink = jest.fn();
+const mockCancelPaymentLink = jest.fn();
+const mockEnqueueReminder = jest.fn();
+const mockEnqueueImmediateReminder = jest.fn();
+const mockRemoveReminderJob = jest.fn();
+const mockSendMail = jest.fn();
+
+jest.unstable_mockModule("../../../shared/services/razorpay.service.js", () => ({
+    __esModule: true,
+    default: {
+        createPaymentLink: mockCreatePaymentLink,
+        fetchPaymentLink: jest.fn(),
+        cancelPaymentLink: mockCancelPaymentLink,
+    },
+}));
+
+jest.unstable_mockModule("../../../shared/services/reminderQueue.service.js", () => ({
+    __esModule: true,
+    enqueueReminder: mockEnqueueReminder,
+    enqueueImmediateReminder: mockEnqueueImmediateReminder,
+    removeReminderJob: mockRemoveReminderJob,
+    getReminderJob: jest.fn(),
+    default: {
+        enqueueReminder: mockEnqueueReminder,
+        enqueueImmediateReminder: mockEnqueueImmediateReminder,
+        removeReminderJob: mockRemoveReminderJob,
+    },
+}));
+
 jest.unstable_mockModule("../../../shared/utils/sendMail.util.js", () => ({
     __esModule: true,
-    default: jest.fn(),
+    default: mockSendMail,
 }));
 
 const { default: createApp } = await import("../../../app.js");
-const { default: User } = await import("../../../shared/models/user.model.js");
-const { default: Employee } = await import("../../../shared/models/employee.model.js");
-const { default: Permission } = await import("../../../shared/models/permission.model.js");
+const { default: env } = await import("../../../shared/config/env.config.js");
+const { default: Customer } = await import("../../../shared/models/customer.model.js");
+const { default: Invoice } = await import("../../../shared/models/invoice.model.js");
+const { default: Organization } = await import("../../../shared/models/organization.model.js");
+const { default: PaymentLink } = await import("../../../shared/models/paymentLink.model.js");
+const { default: Reminder } = await import("../../../shared/models/reminder.model.js");
+const { default: ReminderDelivery } = await import("../../../shared/models/reminderDelivery.model.js");
 
-let mongoServer, app, orgId, adminUserToken, userWithoutPermToken;
+let app;
+let mongoServer;
+let organization;
+let otherOrganization;
+let customer;
+let invoice;
+let token;
+let otherToken;
+
+function accessToken(organizationId) {
+    return jwt.sign({
+        userId: new mongoose.Types.ObjectId().toString(),
+        organizationId: organizationId.toString(),
+        roles: ["ADMIN"],
+        permissions: [],
+    }, env.ACCESS_TOKEN_SECRET);
+}
+
+async function createReminder(channels = ["email"], overrides = {}) {
+    return await request(app)
+        .post("/api/reminders")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+            invoiceId: invoice._id,
+            scheduledFor: "2026-08-01T10:00:00.000Z",
+            channels,
+            title: "Invoice payment reminder",
+            ...overrides,
+        });
+}
 
 beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
     await mongoose.connect(mongoServer.getUri());
+    await Promise.all([PaymentLink.syncIndexes(), ReminderDelivery.syncIndexes()]);
     app = createApp();
 });
 
@@ -27,57 +94,342 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-    for (const key in mongoose.connection.collections) {
-        await mongoose.connection.collections[key].deleteMany({});
+    for (const collection of Object.values(mongoose.connection.collections)) {
+        await collection.deleteMany({});
     }
 
-    await Permission.create({ name: "Create Reminders", code: "REMINDERS.CREATE", module: "reminders" });
+    jest.clearAllMocks();
+    mockCreatePaymentLink.mockResolvedValue({
+        id: "plink_reminder_1",
+        short_url: "https://rzp.io/i/reminder-link",
+        status: "created",
+        created_at: 1784428200,
+    });
+    mockCancelPaymentLink.mockResolvedValue({ status: "cancelled" });
+    mockEnqueueReminder.mockResolvedValue({
+        jobId: "reminder-job",
+        queueStatus: "queued",
+    });
+    mockEnqueueImmediateReminder.mockResolvedValue({
+        jobId: "reminder-immediate",
+        queueStatus: "queued",
+    });
+    mockRemoveReminderJob.mockResolvedValue(true);
+    mockSendMail.mockResolvedValue("mock-email-message");
 
-    const adminUser = await User.create({ name: "Admin User", email: "admin@example.com", password: "password123", isVerified: true });
-    const loginRes = await request(app).post("/api/auth/login").send({ email: "admin@example.com", password: "password123" });
-    const token = loginRes.body.data.accessToken;
-
-    const onboardRes = await request(app).post("/api/organization").set("Authorization", `Bearer ${token}`)
-        .send({ name: "Test Corp", code: "TCORP", firstName: "Admin", lastName: "User" });
-    adminUserToken = onboardRes.body.data.accessToken;
-    orgId = onboardRes.body.data.organization._id;
-
-    const normalUser = await User.create({ name: "Normal User", email: "normal@example.com", password: "password123", isVerified: true });
-    await Employee.create({ userId: normalUser._id, organizationId: orgId, employeeCode: "EMP-002", firstName: "Normal", lastName: "User", email: "normal@example.com", status: "active" });
-    const normalLogin = await request(app).post("/api/auth/login").send({ email: "normal@example.com", password: "password123" });
-    userWithoutPermToken = normalLogin.body.data.accessToken;
+    organization = await Organization.create({ name: "Reminder Org", code: "REMINDER" });
+    otherOrganization = await Organization.create({ name: "Other Org", code: "OTHER-REM" });
+    customer = await Customer.create({
+        organizationId: organization._id,
+        name: "Asha Customer",
+        email: "asha@example.com",
+        phone: "98765 43210",
+    });
+    invoice = await Invoice.create({
+        organizationId: organization._id,
+        customerId: customer._id,
+        invoiceNumber: "INV-REM-001",
+        invoiceDate: new Date("2026-07-01T00:00:00.000Z"),
+        dueDate: new Date("2026-08-10T00:00:00.000Z"),
+        subTotal: 1000,
+        taxTotal: 180,
+        grandTotal: 1180,
+        status: "sent",
+    });
+    token = accessToken(organization._id);
+    otherToken = accessToken(otherOrganization._id);
 });
 
-describe("Reminders Management Integration Tests", () => {
-    describe("POST /api/reminders", () => {
-        it("should successfully create a reminder", async () => {
-            const res = await request(app)
-                .post("/api/reminders")
-                .set("Authorization", `Bearer ${adminUserToken}`)
-                .send({ title: "Follow up with client", dueDate: "2026-08-01", description: "Call regarding invoice" });
+describe("Payment reminders API", () => {
+    it("creates a scheduled email reminder and enqueues one delayed job", async () => {
+        const response = await createReminder(["email"]);
 
-            expect(res.status).toBe(201);
-            expect(res.body.success).toBe(true);
-            expect(res.body.data.title).toBe("Follow up with client");
-            expect(res.body.data.status).toBe("pending");
+        expect(response.status).toBe(201);
+        expect(response.body.data.reminder.channels).toEqual(["email"]);
+        expect(response.body.data.reminder.emailStatus).toBe("pending");
+        expect(response.body.data.reminder.whatsappStatus).toBe("skipped");
+        expect(response.body.data.paymentUrl).toBe("https://rzp.io/i/reminder-link");
+        expect(mockEnqueueReminder).toHaveBeenCalledTimes(1);
+        expect(mockEnqueueReminder).toHaveBeenCalledWith(expect.objectContaining({
+            scheduledFor: new Date("2026-08-01T10:00:00.000Z"),
+        }));
+    });
+
+    it("creates email and WhatsApp channels with a reused PaymentLink", async () => {
+        const response = await createReminder(["whatsapp", "email"]);
+
+        expect(response.status).toBe(201);
+        expect(response.body.data.reminder.channels).toEqual(["email", "whatsapp"]);
+        expect(await PaymentLink.countDocuments({ invoiceId: invoice._id })).toBe(1);
+        expect(mockCreatePaymentLink).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns a clean queue summary without exposing the BullMQ job", async () => {
+        mockEnqueueReminder.mockResolvedValueOnce({
+            job: { data: { reminderId: "internal" }, token: "not-for-http" },
+            jobId: "reminder-clean-response",
+            queueStatus: "queued",
+            reused: false,
         });
 
-        it("should create a reminder with completed status", async () => {
-            const res = await request(app)
-                .post("/api/reminders")
-                .set("Authorization", `Bearer ${adminUserToken}`)
-                .send({ title: "Done task", dueDate: "2026-07-01", status: "completed" });
+        const response = await createReminder(["email"]);
 
-            expect(res.status).toBe(201);
-            expect(res.body.data.status).toBe("completed");
+        expect(response.status).toBe(201);
+        expect(response.body.data.queue).toEqual({
+            jobId: "reminder-clean-response",
+            queueStatus: "queued",
+            reused: false,
+        });
+        expect(response.body.data.queue.job).toBeUndefined();
+    });
+
+    it("keeps the reminder recoverable when its first Redis enqueue fails", async () => {
+        mockEnqueueReminder.mockRejectedValueOnce(new Error("Redis unavailable"));
+
+        const response = await createReminder(["email"]);
+
+        expect(response.status).toBe(503);
+        const reminder = await Reminder.findOne({ invoiceId: invoice._id });
+        expect(reminder.status).toBe("scheduled");
+        expect(reminder.queueStatus).toBe("failed");
+        expect(reminder.lastError).toBe("Reminder queue is temporarily unavailable.");
+    });
+
+    it("rejects duplicate active schedules and duplicate request channels", async () => {
+        expect((await createReminder(["email"])).status).toBe(201);
+
+        const duplicateSchedule = await createReminder(["email"]);
+        const duplicateChannels = await createReminder(["email", "email"], {
+            scheduledFor: "2026-08-02T10:00:00.000Z",
         });
 
-        it("should return forbidden without permission", async () => {
-            const res = await request(app)
-                .post("/api/reminders")
-                .set("Authorization", `Bearer ${userWithoutPermToken}`)
-                .send({ title: "Secret reminder", dueDate: "2026-08-15" });
-            expect(res.status).toBe(403);
+        expect(duplicateSchedule.status).toBe(409);
+        expect(duplicateChannels.status).toBe(400);
+        expect(await Reminder.countDocuments({ invoiceId: invoice._id })).toBe(1);
+    });
+
+    it.each([
+        ["email", "email"],
+        ["whatsapp", "phone"],
+    ])("requires customer contact data for %s", async (channel, contactField) => {
+        await Customer.updateOne({ _id: customer._id }, { $unset: { [contactField]: 1 } });
+
+        const response = await createReminder([channel]);
+
+        expect(response.status).toBe(400);
+        expect(response.body.message.toLowerCase()).toContain(contactField);
+        expect(mockEnqueueReminder).not.toHaveBeenCalled();
+    });
+
+    it("does not expose a cross-organization invoice", async () => {
+        const response = await request(app)
+            .post("/api/reminders")
+            .set("Authorization", `Bearer ${otherToken}`)
+            .send({
+                invoiceId: invoice._id,
+                scheduledFor: "2026-08-01T10:00:00.000Z",
+                channels: ["email"],
+            });
+
+        expect(response.status).toBe(404);
+        expect(mockCreatePaymentLink).not.toHaveBeenCalled();
+    });
+
+    it("wait=true sends a professional email and generates an encoded WhatsApp deeplink", async () => {
+        const created = await createReminder(["email", "whatsapp"]);
+        const reminderId = created.body.data.reminder.reminderId;
+
+        const response = await request(app)
+            .post(`/api/reminders/${reminderId}/send?wait=true`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.reminder.status).toBe("action_required");
+        expect(response.body.data.emailResult.status).toBe("sent");
+        expect(response.body.data.whatsappResult.status).toBe("link_generated");
+        expect(response.body.data.whatsappDeepLink).toContain("https://wa.me/919876543210?text=");
+        expect(response.body.data.whatsappDeepLink).not.toContain(" ");
+        expect(mockSendMail).toHaveBeenCalledTimes(1);
+        expect(mockSendMail.mock.calls[0][2]).toContain("Duevora");
+        expect(mockSendMail.mock.calls[0][2]).toContain("Pay Now");
+    });
+
+    it("email success plus an invalid WhatsApp destination becomes partially sent", async () => {
+        customer.phone = "invalid phone";
+        await customer.save({ validateBeforeSave: false });
+
+        const created = await createReminder(["email", "whatsapp"]);
+        const response = await request(app)
+            .post(`/api/reminders/${created.body.data.reminder.reminderId}/send?wait=true`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.reminder.status).toBe("partially_sent");
+        expect(response.body.data.emailResult.status).toBe("sent");
+        expect(response.body.data.whatsappResult.status).toBe("failed");
+    });
+
+    it("all automatic channel failures become failed", async () => {
+        mockSendMail.mockRejectedValue(new Error("SMTP credentials must stay private"));
+        const created = await createReminder(["email"]);
+
+        const response = await request(app)
+            .post(`/api/reminders/${created.body.data.reminder.reminderId}/send?wait=true`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.reminder.status).toBe("failed");
+        expect(response.body.data.emailResult.status).toBe("failed");
+        expect(JSON.stringify(response.body)).not.toContain("credentials");
+    });
+
+    it("completes without sending when the invoice is already paid", async () => {
+        const created = await createReminder(["email"]);
+        await Invoice.updateOne({ _id: invoice._id }, { $set: { status: "paid" } });
+
+        const response = await request(app)
+            .post(`/api/reminders/${created.body.data.reminder.reminderId}/send?wait=true`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.reminder.status).toBe("completed");
+        expect(response.body.data.outstandingAmount).toBe(0);
+        expect(mockSendMail).not.toHaveBeenCalled();
+    });
+
+    it("does not resend a channel already marked sent", async () => {
+        const created = await createReminder(["email"]);
+        await Reminder.updateOne({ _id: created.body.data.reminder.reminderId }, {
+            $set: { emailStatus: "sent", status: "sent" },
         });
+
+        const response = await request(app)
+            .post(`/api/reminders/${created.body.data.reminder.reminderId}/send?wait=true`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.skipped).toBe(true);
+        expect(mockSendMail).not.toHaveBeenCalled();
+    });
+
+    it("queues Send Now using the deterministic reminder job", async () => {
+        const created = await createReminder(["email"]);
+        const reminderId = created.body.data.reminder.reminderId;
+
+        const response = await request(app)
+            .post(`/api/reminders/${reminderId}/send`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.jobId).toBe("reminder-immediate");
+        expect(response.body.data.paymentUrl).toBe("https://rzp.io/i/reminder-link");
+        expect(mockEnqueueImmediateReminder).toHaveBeenCalledWith(reminderId);
+    });
+
+    it("lists and retrieves reminders only inside the authenticated organization", async () => {
+        const created = await createReminder(["email"]);
+        const reminderId = created.body.data.reminder.reminderId;
+
+        const list = await request(app)
+            .get("/api/reminders?status=scheduled&channel=email&limit=10")
+            .set("Authorization", `Bearer ${token}`);
+        const detail = await request(app)
+            .get(`/api/reminders/${reminderId}`)
+            .set("Authorization", `Bearer ${token}`);
+        const crossOrganization = await request(app)
+            .get(`/api/reminders/${reminderId}`)
+            .set("Authorization", `Bearer ${otherToken}`);
+
+        expect(list.status).toBe(200);
+        expect(list.body.data.reminders).toHaveLength(1);
+        expect(list.body.data.pagination.total).toBe(1);
+        expect(detail.status).toBe(200);
+        expect(detail.body.data.reminderId).toBe(reminderId);
+        expect(crossOrganization.status).toBe(404);
+    });
+
+    it("cancels a reminder and removes its delayed job", async () => {
+        const created = await createReminder(["email"]);
+        const reminderId = created.body.data.reminder.reminderId;
+
+        const response = await request(app)
+            .patch(`/api/reminders/${reminderId}/cancel`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.status).toBe("cancelled");
+        expect(mockRemoveReminderJob).toHaveBeenCalledWith(reminderId);
+    });
+
+    it("keeps cancellation idempotent after the queue job is removed", async () => {
+        const created = await createReminder(["email"]);
+        const reminderId = created.body.data.reminder.reminderId;
+
+        const first = await request(app)
+            .patch(`/api/reminders/${reminderId}/cancel`)
+            .set("Authorization", `Bearer ${token}`);
+        await Reminder.updateOne({ _id: reminderId }, { $set: { queueStatus: "removed" } });
+        const second = await request(app)
+            .patch(`/api/reminders/${reminderId}/cancel`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(first.status).toBe(200);
+        expect(second.status).toBe(200);
+        expect(second.body.data.status).toBe("cancelled");
+        expect(mockRemoveReminderJob).toHaveBeenCalledTimes(1);
+    });
+
+    it("rejects delivery for a cancelled reminder", async () => {
+        const created = await createReminder(["email"]);
+        const reminderId = created.body.data.reminder.reminderId;
+        await Reminder.updateOne({ _id: reminderId }, { $set: { status: "cancelled" } });
+
+        const response = await request(app)
+            .post(`/api/reminders/${reminderId}/send?wait=true`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(400);
+        expect(mockSendMail).not.toHaveBeenCalled();
+    });
+
+    it("releases the delivery lock and records failure after a context error", async () => {
+        const created = await createReminder(["email"]);
+        const reminderId = created.body.data.reminder.reminderId;
+        await Organization.deleteOne({ _id: organization._id });
+
+        const response = await request(app)
+            .post(`/api/reminders/${reminderId}/send?wait=true`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(404);
+        const reminder = await Reminder.findById(reminderId);
+        expect(reminder.status).toBe("failed");
+        expect(reminder.queueStatus).toBe("failed");
+        expect(reminder.processingLockUntil).toBeNull();
+        expect(reminder.processingBy).toBeNull();
+        expect(reminder.nextAttemptAt).toBeNull();
+    });
+
+    it("the processing lock prevents duplicate simultaneous email delivery", async () => {
+        const created = await createReminder(["email"]);
+        const reminderId = created.body.data.reminder.reminderId;
+        mockSendMail.mockImplementation(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            return "one-message";
+        });
+
+        const [first, second] = await Promise.all([
+            request(app)
+                .post(`/api/reminders/${reminderId}/send?wait=true`)
+                .set("Authorization", `Bearer ${token}`),
+            request(app)
+                .post(`/api/reminders/${reminderId}/send?wait=true`)
+                .set("Authorization", `Bearer ${token}`),
+        ]);
+
+        expect(first.status).toBe(200);
+        expect(second.status).toBe(200);
+        expect(mockSendMail).toHaveBeenCalledTimes(1);
+        expect(await ReminderDelivery.countDocuments({ reminderId, channel: "email" })).toBe(1);
     });
 });
