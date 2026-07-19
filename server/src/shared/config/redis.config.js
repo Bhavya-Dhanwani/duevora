@@ -3,18 +3,33 @@ import env from "./env.config.js";
 import logger from "./logger.config.js";
 
 const redisConnections = new Set();
+const REQUEST_REDIS_CONNECT_TIMEOUT_MS = 3000;
+const REQUEST_REDIS_COMMAND_TIMEOUT_MS = 3000;
 
-function getRedisConnectionOptions() {
-    return {
+function getRedisConnectionOptions({ requestBounded = false } = {}) {
+    const options = {
         maxRetriesPerRequest: null,
         enableReadyCheck: true,
         lazyConnect: true,
     };
+
+    if (!requestBounded) return options;
+
+    return {
+        ...options,
+        // Request-facing producers must return a controlled error instead of
+        // waiting indefinitely for Redis. Workers intentionally retain the
+        // BullMQ-required null value above so blocking reads keep retrying.
+        maxRetriesPerRequest: 1,
+        enableOfflineQueue: false,
+        connectTimeout: REQUEST_REDIS_CONNECT_TIMEOUT_MS,
+        commandTimeout: REQUEST_REDIS_COMMAND_TIMEOUT_MS,
+    };
 }
 
-function createRedisConnection(connectionName = "bullmq") {
+function createRedisConnection(connectionName = "bullmq", options = {}) {
     const connection = new IORedis(env.REDIS_URL, {
-        ...getRedisConnectionOptions(),
+        ...getRedisConnectionOptions(options),
         connectionName,
     });
 
@@ -59,6 +74,8 @@ async function closeRedisConnections() {
 }
 
 export {
+    REQUEST_REDIS_COMMAND_TIMEOUT_MS,
+    REQUEST_REDIS_CONNECT_TIMEOUT_MS,
     closeRedisConnection,
     closeRedisConnections,
     createRedisConnection,
