@@ -5,14 +5,16 @@ import env from "./env.config.js";
 // creating a logger instance
 const logger = pino({
     level: env.NODE_ENV === "production" ? "info" : "debug",
-    transport: {
-        target: "pino-pretty",
-        options: {
-            colorize: true,
-            translateTime: "SYS:standard",
-            ignore: "pid,hostname",
+    ...(env.NODE_ENV !== "production" && {
+        transport: {
+            target: "pino-pretty",
+            options: {
+                colorize: true,
+                translateTime: "SYS:standard",
+                ignore: "pid,hostname",
+            },
         },
-    },
+    }),
 });
 
 export default logger;
