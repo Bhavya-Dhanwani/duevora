@@ -67,7 +67,9 @@ function normalizePhoneNumber(phone, defaultCountryCode = env.WHATSAPP_DEFAULT_C
             throw new Error("Phone number has an invalid country code");
         }
     } else if (!hasUnmarkedCountryCode) {
-        normalizedPhone = `${countryCode}${phoneDigits}`;
+        // Local trunk prefixes are not part of the E.164 national number.
+        const localDigits = phoneDigits.replace(/^0(?=\d{7,14}$)/, "");
+        normalizedPhone = `${countryCode}${localDigits}`;
     }
 
     if (normalizedPhone.length < E164_MIN_DIGITS || normalizedPhone.length > E164_MAX_DIGITS) {

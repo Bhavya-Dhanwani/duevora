@@ -17,6 +17,7 @@ const booleanValue = z.preprocess((value) => {
 }, z.boolean());
 
 const positiveInteger = z.coerce.number().int().positive();
+const hasNonBlankValue = (value) => typeof value === "string" && value.trim().length > 0;
 
 const redisUrl = z.string().url().refine((value) => {
     try {
@@ -61,12 +62,12 @@ const envSchema = z.object({
     REMINDER_RECOVERY_INTERVAL_MS: positiveInteger.default(envConstants.REMINDER_RECOVERY_INTERVAL_MS),
     REMINDER_RECOVERY_BATCH_SIZE: positiveInteger.default(envConstants.REMINDER_RECOVERY_BATCH_SIZE),
     WHATSAPP_MODE: z.enum(["disabled", "deeplink", "cloud"]).default(envConstants.WHATSAPP_MODE),
-    WHATSAPP_DEFAULT_COUNTRY_CODE: z.string().regex(/^\d{1,4}$/).default(envConstants.WHATSAPP_DEFAULT_COUNTRY_CODE),
+    WHATSAPP_DEFAULT_COUNTRY_CODE: z.string().regex(/^\d{1,3}$/).default(envConstants.WHATSAPP_DEFAULT_COUNTRY_CODE),
     WHATSAPP_API_VERSION: z.string().default(envConstants.WHATSAPP_API_VERSION),
     WHATSAPP_PHONE_NUMBER_ID: z.string().default(envConstants.WHATSAPP_PHONE_NUMBER_ID),
     WHATSAPP_ACCESS_TOKEN: z.string().default(envConstants.WHATSAPP_ACCESS_TOKEN),
     WHATSAPP_TEMPLATE_NAME: z.string().default(envConstants.WHATSAPP_TEMPLATE_NAME),
-    WHATSAPP_TEMPLATE_LANGUAGE: z.string().min(1).default(envConstants.WHATSAPP_TEMPLATE_LANGUAGE),
+    WHATSAPP_TEMPLATE_LANGUAGE: z.string().trim().min(1).default(envConstants.WHATSAPP_TEMPLATE_LANGUAGE),
 }).superRefine((values, context) => {
     if (values.NODE_ENV === "production") {
         for (const key of ["ACCESS_TOKEN_SECRET", "REFRESH_TOKEN_SECRET"]) {
@@ -80,7 +81,11 @@ const envSchema = z.object({
         }
     }
 
-    if (values.SEND_MAIL && (!values.SMTP_USER || !values.SMTP_PASS || values.SMTP_PASS === envConstants.SMTP_PASS)) {
+    if (values.SEND_MAIL && (
+        !hasNonBlankValue(values.SMTP_USER)
+        || !hasNonBlankValue(values.SMTP_PASS)
+        || values.SMTP_PASS === envConstants.SMTP_PASS
+    )) {
         context.addIssue({
             code: "custom",
             path: ["SMTP_PASS"],
@@ -90,7 +95,7 @@ const envSchema = z.object({
 
     if (values.RAZORPAY_ENABLED) {
         for (const key of ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"]) {
-            if (!values[key]) {
+            if (!hasNonBlankValue(values[key])) {
                 context.addIssue({
                     code: "custom",
                     path: [key],
@@ -109,7 +114,7 @@ const envSchema = z.object({
         ];
 
         for (const key of requiredCloudKeys) {
-            if (!values[key]) {
+            if (!hasNonBlankValue(values[key])) {
                 context.addIssue({
                     code: "custom",
                     path: [key],

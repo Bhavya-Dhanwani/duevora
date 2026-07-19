@@ -36,6 +36,10 @@ describe("phone utility", () => {
         expect(normalizePhoneNumber("98765-43210", "91")).toBe("919876543210");
     });
 
+    it("removes a local trunk zero before adding the configured country code", () => {
+        expect(normalizePhoneNumber("09876543210", "91")).toBe("919876543210");
+    });
+
     it("preserves a valid unmarked international number", () => {
         expect(normalizePhoneNumber("1 (415) 555-2671", "91")).toBe("14155552671");
     });
@@ -46,6 +50,12 @@ describe("phone utility", () => {
             expect(() => normalizePhoneNumber(phone, "91")).toThrow();
         }
     );
+
+    it("rejects an unknown default calling code", () => {
+        expect(() => normalizePhoneNumber("9876543210", "999")).toThrow(
+            "WhatsApp default country code is invalid"
+        );
+    });
 });
 
 describe("HTML escaping utility", () => {
