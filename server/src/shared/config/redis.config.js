@@ -5,6 +5,7 @@ import logger from "./logger.config.js";
 const redisConnections = new Set();
 const REQUEST_REDIS_CONNECT_TIMEOUT_MS = 3000;
 const REQUEST_REDIS_COMMAND_TIMEOUT_MS = 3000;
+const REDIS_HEALTH_TIMEOUT_MS = 1000;
 
 function getRedisConnectionOptions({ requestBounded = false } = {}) {
     const options = {
@@ -73,11 +74,42 @@ async function closeRedisConnections() {
     );
 }
 
+async function checkRedisHealth({
+    connectionFactory = createRedisConnection,
+    closeConnection = closeRedisConnection,
+    timeoutMs = REDIS_HEALTH_TIMEOUT_MS,
+} = {}) {
+    let connection;
+    let timeout;
+
+    try {
+        connection = connectionFactory("redis-health", { requestBounded: true });
+        const healthOperation = (async () => {
+            if (connection.status === "wait") await connection.connect();
+            return await connection.ping();
+        })();
+        const timeoutOperation = new Promise((_, reject) => {
+            timeout = setTimeout(() => reject(new Error("Redis health check timed out")), timeoutMs);
+            timeout.unref?.();
+        });
+        const response = await Promise.race([healthOperation, timeoutOperation]);
+
+        return response === "PONG" ? "available" : "unavailable";
+    } catch {
+        return "unavailable";
+    } finally {
+        clearTimeout(timeout);
+        await closeConnection(connection);
+    }
+}
+
 export {
+    REDIS_HEALTH_TIMEOUT_MS,
     REQUEST_REDIS_COMMAND_TIMEOUT_MS,
     REQUEST_REDIS_CONNECT_TIMEOUT_MS,
     closeRedisConnection,
     closeRedisConnections,
+    checkRedisHealth,
     createRedisConnection,
     getRedisConnectionOptions,
 };

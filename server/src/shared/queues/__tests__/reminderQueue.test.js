@@ -3,6 +3,7 @@ import ServiceUnavailable from "../../errors/ServiceUnavailable.error.js";
 import {
     REQUEST_REDIS_COMMAND_TIMEOUT_MS,
     REQUEST_REDIS_CONNECT_TIMEOUT_MS,
+    checkRedisHealth,
     getRedisConnectionOptions,
 } from "../../config/redis.config.js";
 import {
@@ -43,6 +44,38 @@ describe("reminder queue factory", () => {
             connectTimeout: REQUEST_REDIS_CONNECT_TIMEOUT_MS,
             commandTimeout: REQUEST_REDIS_COMMAND_TIMEOUT_MS,
         });
+    });
+
+    it("checks Redis through a bounded disposable connection", async () => {
+        const connection = {
+            status: "wait",
+            connect: jest.fn().mockResolvedValue(undefined),
+            ping: jest.fn().mockResolvedValue("PONG"),
+        };
+        const closeConnection = jest.fn().mockResolvedValue(undefined);
+
+        await expect(checkRedisHealth({
+            connectionFactory: jest.fn(() => connection),
+            closeConnection,
+            timeoutMs: 50,
+        })).resolves.toBe("available");
+
+        expect(connection.connect).toHaveBeenCalledTimes(1);
+        expect(connection.ping).toHaveBeenCalledTimes(1);
+        expect(closeConnection).toHaveBeenCalledWith(connection);
+    });
+
+    it("sanitizes failed Redis health checks as unavailable", async () => {
+        const connection = {
+            status: "ready",
+            ping: jest.fn().mockRejectedValue(new Error("redis://user:secret@host")),
+        };
+
+        await expect(checkRedisHealth({
+            connectionFactory: jest.fn(() => connection),
+            closeConnection: jest.fn(),
+            timeoutMs: 50,
+        })).resolves.toBe("unavailable");
     });
 
     it("builds a queue with retry, backoff and bounded retention defaults", () => {

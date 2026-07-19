@@ -1,21 +1,20 @@
-// Importing modules
 import express from "express";
 import Ok from "../responses/Ok.response.js";
+import getSystemHealth from "../services/health.service.js";
 
-// Making the express router
+function createHealthHandler(healthProvider = getSystemHealth) {
+    return async (req, res) => {
+        const health = await healthProvider();
+        return Ok(
+            res,
+            health.status === "healthy" ? "Server is healthy" : "Server is degraded",
+            health
+        );
+    };
+}
+
 const router = express.Router();
+router.get("/", createHealthHandler());
 
-/*
-    @route GET /api/health
-    @desc checks server health
-    @access Public
-*/
-router.get("/", (req, res) => {
-   
-    // sending Ok as response
-    Ok(res, "Server is healthy");
-
-});
-
-// exporting the router
+export { createHealthHandler };
 export default router;
