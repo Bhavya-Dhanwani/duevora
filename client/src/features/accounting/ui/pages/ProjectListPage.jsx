@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HiPlus } from "react-icons/hi2";
+import { HiPlus, HiOutlineDocumentArrowDown } from "react-icons/hi2";
+import { exportToPdf } from "../../../../lib/exportToPdf";
 import { accountingApi } from "../../api/accountingApi";
 import { Button, DataTable, Modal, PageHeader } from "../../../../app/components/common";
 import useNotification from "../../../../app/components/notification/useNotification";
@@ -43,8 +44,11 @@ export default function ProjectListPage() {
     <div style={{ maxWidth: 1100, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
         <PageHeader title="Projects" subtitle="Track projects and their associated costs." />
-        <Button variant="primary" onClick={() => setOpen(true)}>
-          <HiPlus style={{ marginRight: 6 }} />Create project
+        <Button variant="primary" onClick={() => setOpen(true)} icon={HiPlus}>
+          Create project
+        </Button>
+        <Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "Projects", columns: [{key:"name",label:"Name"},{key:"code",label:"Code"},{key:"description",label:"Description"},{key:"startDate",label:"Start Date",render:(v)=>v?new Date(v).toLocaleDateString("en-IN"):"—"},{key:"endDate",label:"End Date",render:(v)=>v?new Date(v).toLocaleDateString("en-IN"):"—"}], data: items, filename: "projects" })}>
+          Export PDF
         </Button>
       </div>
 

@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { HiArrowLeft } from "react-icons/hi2";
+import { HiArrowLeft, HiOutlineDocumentArrowDown } from "react-icons/hi2";
+import { exportToPdf } from "../../../../lib/exportToPdf";
 import { accountingApi } from "../../api/accountingApi";
 import { PageHeader, StatusBadge, Button } from "../../../../app/components/common";
 
@@ -33,8 +34,8 @@ export default function JournalEntryDetailPage() {
     return (
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <PageHeader title="Journal Entry" subtitle="Entry not found." />
-        <Button variant="secondary" onClick={() => navigate("/dashboard/journal-entries")}>
-          <HiArrowLeft style={{ marginRight: 6 }} />Back to Journal Entries
+        <Button variant="secondary" onClick={() => navigate("/dashboard/journal-entries")} icon={HiArrowLeft}>
+          Back to Journal Entries
         </Button>
       </div>
     );
@@ -47,8 +48,11 @@ export default function JournalEntryDetailPage() {
           title={`Journal Entry ${entry.entryNumber || ""}`}
           subtitle={entry.narration || "Double-entry posting detail"}
         />
-        <Button variant="secondary" onClick={() => navigate("/dashboard/journal-entries")}>
-          <HiArrowLeft style={{ marginRight: 6 }} />Back
+        <Button variant="secondary" onClick={() => navigate("/dashboard/journal-entries")} icon={HiArrowLeft}>
+          Back
+        </Button>
+        <Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: `Journal Entry ${entry.entryNumber || ""}`, columns: [{key:"accountId",label:"Account",render:(v)=>v?.name||"—"},{key:"debit",label:"Debit",render:(v)=>v?`₹${Number(v).toLocaleString("en-IN",{minimumFractionDigits:2})}`:"—"},{key:"credit",label:"Credit",render:(v)=>v?`₹${Number(v).toLocaleString("en-IN",{minimumFractionDigits:2})}`:"—"}], data: lines, filename: `journal-entry-${entry.entryNumber || entry._id}` })}>
+          Export PDF
         </Button>
       </div>
 

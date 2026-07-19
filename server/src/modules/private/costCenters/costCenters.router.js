@@ -18,5 +18,7 @@ const controller = new CostCentersController();
 */
 router.post("/", authMiddleware, permissionMiddleware("costCenters.create"), createCostCenterValidators, controller.createCostCenter);
 
+router.get("/", authMiddleware, permissionMiddleware("costCenters.view"), controller.listCostCenters);
+
 // exporting the router
 export default router;

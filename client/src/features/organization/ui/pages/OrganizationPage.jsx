@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { organizationApi } from "../../api/organizationApi";
 import { PageHeader, Button } from "../../../../app/components/common";
 import useNotification from "../../../../app/components/notification/useNotification";
+import { exportToPdf } from "../../../../lib/exportToPdf";
+import { HiOutlineDocumentArrowDown } from "react-icons/hi2";
 
 const input = { display: "block", boxSizing: "border-box", width: "100%", marginTop: 5, padding: 9, border: "1px solid #cbd5e1", borderRadius: 7 };
 
@@ -41,7 +43,7 @@ export default function OrganizationPage() {
       <PageHeader
         title="Organization"
         subtitle="View and update your organization details."
-        action={!editing ? <Button variant="primary" onClick={startEdit}>Edit</Button> : undefined}
+        action={!editing ? <div style={{ display: "flex", gap: 10 }}><Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "Organization Details", filename: "organization", columns: [{ key: "label", label: "Field" }, { key: "value", label: "Value" }], data: [["Name", org.name], ["Code", org.code], ["Phone", org.phone], ["Industry", org.industry], ["Business Type", org.businessType], ["Address", org.address], ["Status", org.status]].map(([label, val]) => ({ label, value: val || "—" })) })}>Export PDF</Button><Button variant="primary" onClick={startEdit}>Edit</Button></div> : undefined}
       />
 
       <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 24 }}>

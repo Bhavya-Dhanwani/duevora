@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { bankingApi } from "../../api/bankingApi";
 import { PageHeader, Button, DataTable, StatusBadge, Modal } from "../../../../app/components/common";
 import useNotification from "../../../../app/components/notification/useNotification";
+import { exportToPdf } from "../../../../lib/exportToPdf";
+import { HiOutlineDocumentArrowDown } from "react-icons/hi2";
 
 const input = { display: "block", boxSizing: "border-box", width: "100%", marginTop: 5, padding: 9, border: "1px solid #cbd5e1", borderRadius: 7 };
 
@@ -68,7 +70,7 @@ export default function BankReconciliationPage() {
       <PageHeader
         title="Bank Reconciliation"
         subtitle="Compare your bank statement with recorded transactions."
-        action={<Button variant="primary" onClick={() => setIsReconcileOpen(true)}>Reconcile</Button>}
+        action={<div style={{ display: "flex", gap: 10 }}><Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "Bank Reconciliation", filename: "bank-reconciliation", columns: [{ key: "bankAccount", label: "Bank Account", render: (_, row) => { const ba = bankAccounts.find((b) => b._id === row.bankAccountId); return ba ? `${ba.bankName} (${ba.accountNumber})` : "—"; } }, { key: "transactionDate", label: "Date", render: (v) => v ? new Date(v).toLocaleDateString("en-IN") : "—" }, { key: "type", label: "Type", render: (v) => (v || "—").toUpperCase() }, { key: "amount", label: "Amount", render: (v, row) => `${row.type === "credit" ? "+" : "-"}₹${Number(v || 0).toLocaleString("en-IN")}` }, { key: "reference", label: "Reference" }], data: transactions })}>Export PDF</Button><Button variant="primary" onClick={() => setIsReconcileOpen(true)}>Reconcile</Button></div>}
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>

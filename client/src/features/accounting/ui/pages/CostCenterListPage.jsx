@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HiPlus } from "react-icons/hi2";
+import { HiPlus, HiOutlineDocumentArrowDown } from "react-icons/hi2";
+import { exportToPdf } from "../../../../lib/exportToPdf";
 import { accountingApi } from "../../api/accountingApi";
 import { Button, DataTable, Modal, PageHeader } from "../../../../app/components/common";
 import useNotification from "../../../../app/components/notification/useNotification";
@@ -37,8 +38,11 @@ export default function CostCenterListPage() {
     <div style={{ maxWidth: 1100, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
         <PageHeader title="Cost Centers" subtitle="Track costs by department or project." />
-        <Button variant="primary" onClick={() => setOpen(true)}>
-          <HiPlus style={{ marginRight: 6 }} />Create cost center
+        <Button variant="primary" onClick={() => setOpen(true)} icon={HiPlus}>
+          Create cost center
+        </Button>
+        <Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "Cost Centers", columns: [{key:"name",label:"Name"},{key:"code",label:"Code"},{key:"description",label:"Description"},{key:"status",label:"Status"}], data: items, filename: "cost-centers" })}>
+          Export PDF
         </Button>
       </div>
 

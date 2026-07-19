@@ -13,7 +13,8 @@ import {
   AccessDenied,
 } from "../../../../app/components/common";
 import useNotification from "../../../../app/components/notification/useNotification";
-import { HiPlus, HiOutlineUserPlus, HiOutlineShieldCheck, HiOutlineClipboard } from "react-icons/hi2";
+import { exportToPdf } from "../../../../lib/exportToPdf";
+import { HiPlus, HiOutlineUserPlus, HiOutlineShieldCheck, HiOutlineClipboard, HiOutlineDocumentArrowDown } from "react-icons/hi2";
 import s from "../css/UserList.module.css";
 
 export default function UserListPage() {
@@ -210,15 +211,20 @@ export default function UserListPage() {
     <div className={s.container}>
       <div className={s.actionHeader}>
         <PageHeader title="Identity & Settings" subtitle="Configure system roles, permissions, and team access." />
-        {activeTab === "users" ? (
-          <Button onClick={() => { setInviteSuccessData(null); setIsInviteOpen(true); }} variant="primary">
-            <HiOutlineUserPlus style={{ marginRight: 6 }} /> Invite Member
+        <div style={{ display: "flex", gap: 10 }}>
+          <Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "Users", filename: "users", columns: [{ key: "name", label: "User Name" }, { key: "email", label: "Email Address" }, { key: "isVerified", label: "Status", render: (v) => v ? "Active" : "Pending Invite" }], data: usersResponse?.data || [] })}>
+            Export PDF
           </Button>
-        ) : (
-          <Button onClick={() => setIsCreateRoleOpen(true)} variant="primary">
-            <HiPlus style={{ marginRight: 6 }} /> Create Role
-          </Button>
-        )}
+          {activeTab === "users" ? (
+            <Button onClick={() => { setInviteSuccessData(null); setIsInviteOpen(true); }} variant="primary" icon={HiOutlineUserPlus}>
+              Invite Member
+            </Button>
+          ) : (
+            <Button onClick={() => setIsCreateRoleOpen(true)} variant="primary" icon={HiPlus}>
+              Create Role
+            </Button>
+          )}
+        </div>
       </div>
 
       <Tabs
@@ -277,8 +283,8 @@ export default function UserListPage() {
                   Check modules to grant/revoke security rights.
                 </div>
               </div>
-              <Button onClick={handleSavePermissions} loading={savePermissionsLoading} variant="primary">
-                <HiOutlineShieldCheck style={{ marginRight: 6 }} /> Save Bindings
+              <Button onClick={handleSavePermissions} loading={savePermissionsLoading} variant="primary" icon={HiOutlineShieldCheck}>
+                Save Bindings
               </Button>
             </div>
 
@@ -313,15 +319,13 @@ export default function UserListPage() {
           <div className={s.successBox}>
             <div className={s.successText}>Invitation Link Generated successfully!</div>
             <div style={{ fontSize: "11px", color: "#166534", marginBottom: "8px" }}>
-              Since local email servers are running in mock environments, copy and paste this link in a private tab to sign up:
+              Copy and paste this link in a new tab to sign up:
             </div>
             <div className={s.linkGroup}>
               <input readOnly className={s.linkInput} value={inviteSuccessData.inviteUrl} id="invite-url-input" />
               <Button
                 onClick={() => {
-                  const input = document.getElementById("invite-url-input");
-                  input.select();
-                  navigator.clipboard.writeText(input.value);
+                  navigator.clipboard.writeText(inviteSuccessData.inviteUrl);
                   success("Link copied to clipboard!");
                 }}
                 variant="secondary"

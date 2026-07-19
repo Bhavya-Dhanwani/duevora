@@ -1,6 +1,6 @@
 ﻿import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HiPlus, HiTrash, HiArrowPath } from "react-icons/hi2";
+import { HiPlus, HiTrash, HiArrowPath, HiOutlineDocumentArrowDown } from "react-icons/hi2";
 import { customersApi } from "../../../customers/api/customersApi";
 import { vendorsApi } from "../../../vendors/api/vendorsApi";
 import { productsApi } from "../../../products/api/productsApi";
@@ -8,12 +8,13 @@ import { salesApi } from "../../api/salesApi";
 import { purchasesApi } from "../../../purchases/api/purchasesApi";
 import { Button, PageHeader, DataTable, StatusBadge } from "../../../../app/components/common";
 import useNotification from "../../../../app/components/notification/useNotification";
+import { exportToPdf } from "../../../../lib/exportToPdf";
 
 const inputStyle = { boxSizing: "border-box", width: "100%", padding: 9, marginTop: 5, border: "1px solid #cbd5e1", borderRadius: 7 };
 const today = () => new Date().toISOString().slice(0, 10);
 const productLine = () => ({ productId: "", quantity: 1, unitPrice: 0 });
 
-export default function TransactionDocumentPage({ title, subtitle, party = "customer", kind, create }) {
+export default function TransactionDocumentPage({ title, subtitle, party = "customer", kind, create, exportConfig }) {
   const queryClient = useQueryClient();
   const { success, error: notifyError } = useNotification();
   const [viewMode, setViewMode] = useState("list"); // "list" or "create"
@@ -161,9 +162,16 @@ export default function TransactionDocumentPage({ title, subtitle, party = "cust
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <PageHeader title={title} subtitle={subtitle} />
         {viewMode === "list" && (
-          <Button onClick={() => setViewMode("create")} variant="primary">
-            <HiPlus style={{ marginRight: 6 }} /> New {title.slice(0, -1)}
-          </Button>
+          <div style={{ display: "flex", gap: 10 }}>
+            {exportConfig && (
+              <Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ ...exportConfig, data: documents })}>
+                Export PDF
+              </Button>
+            )}
+            <Button onClick={() => setViewMode("create")} variant="primary" icon={HiPlus}>
+              New {title.slice(0, -1)}
+            </Button>
+          </div>
         )}
       </div>
 
@@ -203,8 +211,8 @@ export default function TransactionDocumentPage({ title, subtitle, party = "cust
                   <button type="button" disabled={form.lines.length === 1} onClick={() => setForm({ ...form, lines: form.lines.filter((_, index) => index !== i) })} style={{ border: 0, background: "none", color: "#dc2626", cursor: "pointer" }}><HiTrash /></button>
                 </div>
               ))}
-              <Button type="button" variant="secondary" onClick={() => setForm({ ...form, lines: [...form.lines, productLine()] })}>
-                <HiPlus style={{ marginRight: 5 }}/>Add item
+              <Button type="button" variant="secondary" onClick={() => setForm({ ...form, lines: [...form.lines, productLine()] })} icon={HiPlus}>
+                Add item
               </Button>
               <div style={{ textAlign: "right", fontWeight: 800 }}>Total: {calculatedTotal.toFixed(2)}</div>
             </>

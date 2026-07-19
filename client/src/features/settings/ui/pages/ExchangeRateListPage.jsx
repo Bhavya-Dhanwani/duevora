@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HiPlus } from "react-icons/hi2";
+import { HiPlus, HiOutlineDocumentArrowDown } from "react-icons/hi2";
 import { settingsApi } from "../../api/settingsApi";
 import { Button, DataTable, Modal, PageHeader } from "../../../../app/components/common";
 import useNotification from "../../../../app/components/notification/useNotification";
+import { exportToPdf } from "../../../../lib/exportToPdf";
 
 const emptyForm = { fromCurrency: "", toCurrency: "", rate: "" };
 const field = { display: "block", boxSizing: "border-box", width: "100%", marginTop: 6, padding: "9px 10px", border: "1px solid #cbd5e1", borderRadius: 7 };
@@ -44,8 +45,11 @@ export default function ExchangeRateListPage() {
     <div style={{ maxWidth: 1100, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
         <PageHeader title="Exchange Rates" subtitle="Manage currency exchange rates." />
-        <Button variant="primary" onClick={() => setOpen(true)}>
-          <HiPlus style={{ marginRight: 6 }} />Add exchange rate
+        <Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "Exchange Rates", filename: "exchange_rates", columns: [{ key: "fromCurrency", label: "From", render: (v) => typeof v === "object" ? v?.code : v || "—" }, { key: "toCurrency", label: "To", render: (v) => typeof v === "object" ? v?.code : v || "—" }, { key: "rate", label: "Rate" }, { key: "date", label: "Date", render: (v) => v ? new Date(v).toLocaleDateString("en-IN") : "—" }], data: items })}>
+          Export PDF
+        </Button>
+        <Button variant="primary" onClick={() => setOpen(true)} icon={HiPlus}>
+          Add exchange rate
         </Button>
       </div>
 

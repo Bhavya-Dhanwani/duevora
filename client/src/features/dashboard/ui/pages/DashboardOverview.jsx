@@ -1,24 +1,16 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useAppSelector } from "../../../../app/store/hooks";
 import { reportsApi } from "../../../reports/api/reportsApi";
 import { accountingApi } from "../../../accounting/api/accountingApi";
-import { remindersApi } from "../../api/dashboardApi";
-import {
-  HiOutlineDocumentText,
-  HiOutlineUserPlus,
-  HiOutlineArrowRight,
-  HiOutlineShoppingBag,
-  HiOutlineBuildingStorefront,
-  HiOutlineArrowDownOnSquare,
-  HiOutlineScale,
-  HiOutlineCalendar,
-} from "react-icons/hi2";
-import { StatCard } from "../../../../app/components/common";
-import s from "../components/css/DashboardOverview.module.css";
+import { salesApi } from "../../../sales/api/salesApi";
+import { paymentsApi, receiptsApi } from "../../../purchases/api/purchasesApi";
+import { StatCard, Tabs, Button } from "../../../../app/components/common";
+import { HiOutlinePrinter } from "react-icons/hi2";
+import toast from "react-hot-toast";
 
 const formatCurrency = (amount) => {
-  if (amount === undefined || amount === null) return "₹0.00";
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
@@ -27,23 +19,22 @@ const formatCurrency = (amount) => {
 };
 
 const formatCompactCurrency = (amount) => {
-  if (amount === undefined || amount === null) return "₹0";
-  const absAmount = Math.abs(amount);
-  const sign = amount < 0 ? "-" : "";
-  if (absAmount >= 100000) {
-    return `${sign}₹${(absAmount / 100000).toFixed(2)}L`;
+  if (Math.abs(amount) >= 10000000) {
+    return `₹${(amount / 10000000).toFixed(2)} Cr`;
   }
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(amount);
+  if (Math.abs(amount) >= 100000) {
+    return `₹${(amount / 100000).toFixed(2)} Lac`;
+  }
+  return formatCurrency(amount);
 };
 
 export default function DashboardOverview() {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
   const orgId = user?.organizationId;
+  const [tab, setTab] = useState("trading-pl");
+  const [printData, setPrintData] = useState(null);
+  const [isPreparingPrint, setIsPreparingPrint] = useState(false);
 
   // 1. Profit & Loss Report (Revenue, Expenses, Net Profit)
   const { data: plData } = useQuery({
@@ -53,15 +44,7 @@ export default function DashboardOverview() {
     retry: false,
   });
 
-  // 2. Cash Flow Report (Inflows & Outflows)
-  const { data: cfData } = useQuery({
-    queryKey: ["cashFlow", orgId],
-    queryFn: () => reportsApi.cashFlow(),
-    enabled: !!orgId,
-    retry: false,
-  });
-
-  // 3. Balance Sheet (Assets, Liabilities)
+  // 2. Balance Sheet (Assets, Liabilities)
   const { data: bsData } = useQuery({
     queryKey: ["balanceSheet", orgId],
     queryFn: () => reportsApi.balanceSheet(),
@@ -69,141 +52,118 @@ export default function DashboardOverview() {
     retry: false,
   });
 
-  // 4. Recent Transactions (Ledger Entries)
-  const { data: ledgerData } = useQuery({
-    queryKey: ["ledgerRecent", orgId],
-    queryFn: () => accountingApi.listLedger({ limit: 5 }),
+  // 3. Business Ratios
+  const { data: ratiosData } = useQuery({
+    queryKey: ["businessRatios", orgId],
+    queryFn: () => reportsApi.ratios(),
     enabled: !!orgId,
     retry: false,
   });
 
-  // 5. Reminders List
-  const { data: remindersData } = useQuery({
-    queryKey: ["remindersList", orgId],
-    queryFn: () => remindersApi.list(),
-    enabled: !!orgId,
-    retry: false,
-  });
+  const pl = plData?.data || {};
+  const bs = bsData?.data || {};
+  const ratios = ratiosData?.data || {};
 
-  // --- Dynamic Value Mappings ---
-  const revenue = plData?.data?.revenue || 0;
-  const expenses = plData?.data?.expenses || 0;
-  const netProfit = plData?.data?.netProfit || 0;
-  const outstanding = bsData?.data?.liabilities || 0;
+  const revenue = pl.revenue || 0;
+  const expenses = pl.expenses || 0;
+  const netProfit = pl.netProfit || 0;
+  const outstanding = bs.liabilities || 0;
 
-  const inflow = cfData?.data?.totalInflow || 0;
-  const outflow = cfData?.data?.totalOutflow || 0;
-  const netCashFlow = cfData?.data?.netCashFlow || 0;
+  const sales = revenue;
+  const directCosts = ratios.directCosts || 0;
+  const grossProfit = sales - directCosts;
+  const operatingExpenses = expenses - directCosts;
 
-  // --- Health Score Math (Liquidity Index) ---
-  const totalFlow = inflow + outflow;
-  const healthScore = totalFlow > 0 ? Math.min(100, Math.max(0, Math.round((inflow / totalFlow) * 100))) : 100;
-  
-  let healthLabel = "Healthy";
-  let healthBadge = "Good";
-  let healthClass = s.greenDot;
-  let healthBadgeClass = s.badgeGreen;
-  
-  if (healthScore < 40) {
-    healthLabel = "Risky";
-    healthBadge = "Critical";
-    healthClass = s.redDot;
-    healthBadgeClass = s.badgeRed;
-  } else if (healthScore < 70) {
-    healthLabel = "Fair";
-    healthBadge = "Moderate";
-    healthClass = s.orangeDot;
-    healthBadgeClass = s.badgeOrange;
-  }
-
-  // --- Top Expenses Math ---
-  const expenseRows = plData?.data?.rows?.filter(r => r.type === "expense") || [];
-  const totalExpensesAmount = expenseRows.reduce((sum, r) => sum + (r.totalDebit - r.totalCredit), 0);
-  
-  const mappedExpenses = expenseRows.map(r => {
-    const amt = r.totalDebit - r.totalCredit;
-    const pct = totalExpensesAmount > 0 ? Math.round((amt / totalExpensesAmount) * 100) : 0;
-    return {
-      name: r.name,
-      amount: amt,
-      percent: pct,
-      color: r.name.toLowerCase().includes("salary") ? "#475569" : 
-             r.name.toLowerCase().includes("rent") ? "#0f172a" : 
-             r.name.toLowerCase().includes("utility") ? "#94a3b8" : "var(--color-accent)"
-    };
-  }).sort((a, b) => b.amount - a.amount);
-
-  const topExpenses = mappedExpenses.length > 0 ? mappedExpenses : [
-    { name: "Salaries", percent: 42, color: "#475569" },
-    { name: "Operations", percent: 24, color: "#0f172a" },
-    { name: "Marketing", percent: 18, color: "var(--color-accent)" },
-    { name: "Utilities", percent: 9, color: "#94a3b8" },
-    { name: "Others", percent: 7, color: "#cbd5e1" },
-  ];
-
-  // --- Reminders Mapping ---
-  const rawReminders = remindersData?.data || [];
-  const reminders = rawReminders.length > 0 ? rawReminders.map(r => {
-    const diffTime = new Date(r.dueDate) - new Date();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    let daysText = `${diffDays} days left`;
-    let urgency = "low";
-    
-    if (diffDays < 0) {
-      daysText = "Overdue";
-      urgency = "high";
-    } else if (diffDays <= 3) {
-      urgency = "high";
-    } else if (diffDays <= 7) {
-      urgency = "medium";
+  const handleExportPdf = async () => {
+    setIsPreparingPrint(true);
+    const loadingToast = toast.loading("Compiling financial statements, invoices, and ledger accounts...");
+    try {
+      const [invoicesRes, paymentsRes, receiptsRes, accountsRes] = await Promise.all([
+        salesApi.listInvoices(),
+        paymentsApi.list(),
+        receiptsApi.list(),
+        accountingApi.listAccounts(),
+      ]);
+      setPrintData({
+        invoices: invoicesRes.data || [],
+        payments: paymentsRes.data || [],
+        receipts: receiptsRes.data || [],
+        accounts: accountsRes.data || [],
+      });
+      toast.dismiss(loadingToast);
+      toast.success("Ready! Opening print dialog...");
+      setTimeout(() => {
+        window.print();
+      }, 500);
+    } catch (err) {
+      toast.dismiss(loadingToast);
+      toast.error("Failed to load PDF package data.");
+    } finally {
+      setIsPreparingPrint(false);
     }
-    return {
-      title: r.title,
-      date: `Due on ${new Date(r.dueDate).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}`,
-      days: daysText,
-      urgency
-    };
-  }) : [
-    { title: "GST Filing", date: "Due on 20 Jun 2026", days: "5 days left", urgency: "high" },
-    { title: "Bank Reconciliation", date: "Due on 22 Jun 2026", days: "7 days left", urgency: "medium" },
-    { title: "Payroll Processing", date: "Due on 25 Jun 2026", days: "10 days left", urgency: "low" },
-  ];
-
-  // --- Recent Transactions Mapping ---
-  const rawEntries = ledgerData?.data?.entries || [];
-  const recentTransactions = rawEntries.length > 0 ? rawEntries.map(tx => {
-    const isDebit = tx.debit > 0;
-    const amt = isDebit ? tx.debit : tx.credit;
-    return {
-      id: tx._id,
-      type: isDebit ? "DR" : "CR",
-      desc: tx.accountId?.name || "Account Entry",
-      sub: tx.journalEntryId?.entryNumber || tx.journalEntryId?.narration || "Manual Entry",
-      status: tx.journalEntryId?.status === "posted" ? "Paid" : "Pending",
-      amount: formatCurrency(amt),
-      date: new Date(tx.date).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })
-    };
-  }) : [
-    { id: 1, type: "INV", desc: "Invoice #INV-0248", sub: "Acme Corp.", amount: "₹42,500.00", date: "10 Jun 2026", status: "Paid" },
-    { id: 2, type: "PAY", desc: "Payment to Vendor", sub: "PaperKart", amount: "₹18,200.00", date: "09 Jun 2026", status: "Pending" },
-    { id: 3, type: "INV", desc: "Invoice #INV-0247", sub: "TechNova Pvt. Ltd.", amount: "₹1,25,000.00", date: "08 Jun 2026", status: "Paid" },
-    { id: 4, type: "EXP", desc: "Expense - Office Rent", sub: "Monthly Expense", amount: "₹35,000.00", date: "07 Jun 2026", status: "Paid" },
-    { id: 5, type: "PO", desc: "Purchase #PO-0112", sub: "Apex Supplies", amount: "₹56,700.00", date: "07 Jun 2026", status: "Pending" },
-  ];
-
-  // --- Dynamic SVG Paths Builder for Cash Flow Overview ---
-  const maxVal = Math.max(inflow, outflow, 10000);
-  const getY = (val) => 150 - (val / maxVal) * 110;
-  
-  // Interpolating gradual paths for visual line chart rendering
-  const inflowPath = `M 20 ${getY(inflow * 0.1)} Q 120 ${getY(inflow * 0.4)}, 220 ${getY(inflow * 0.35)} T 380 ${getY(inflow * 0.75)} T 480 ${getY(inflow)}`;
-  const outflowPath = `M 20 ${getY(outflow * 0.2)} Q 120 ${getY(outflow * 0.3)}, 220 ${getY(outflow * 0.5)} T 380 ${getY(outflow * 0.6)} T 480 ${getY(outflow)}`;
-  const netPath = `M 20 ${getY(netCashFlow * 0.1)} Q 120 ${getY(netCashFlow * 0.5)}, 220 ${getY(netCashFlow * 0.25)} T 380 ${getY(netCashFlow * 0.8)} T 480 ${getY(netCashFlow)}`;
+  };
 
   return (
-    <section className={s.page}>
+    <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: "24px 0 40px", boxSizing: "border-box" }}>
+      <style>{`
+        @media print {
+          .no-print {
+            display: none !important;
+          }
+          .print-only {
+            display: block !important;
+          }
+          body {
+            background: #ffffff !important;
+            color: #000 !important;
+            font-size: 12px !important;
+          }
+          .print-page {
+            page-break-after: always;
+            padding: 40px;
+          }
+          .print-header {
+            border-bottom: 2px solid #000;
+            padding-bottom: 12px;
+            margin-bottom: 24px;
+            text-align: center;
+          }
+          .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+          }
+          .print-table th, .print-table td {
+            border: 1px solid #cbd5e1;
+            padding: 8px;
+            text-align: left;
+          }
+          .print-table th {
+            background-color: #f1f5f9;
+          }
+          .print-total {
+            font-weight: bold;
+            background-color: #f8fafc;
+          }
+        }
+        .print-only {
+          display: none;
+        }
+      `}</style>
+
+      {/* Header with Print Action */}
+      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, marginBottom: 24 }}>
+        <div>
+          <h2 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", margin: 0 }}>Financial Dashboard</h2>
+          <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0 0" }}>Live financial reports and ratios computed from journal ledgers.</p>
+        </div>
+        <Button variant="primary" icon={HiOutlinePrinter} onClick={handleExportPdf} loading={isPreparingPrint}>
+          Export Financial Pack (PDF)
+        </Button>
+      </div>
+
       {/* Stat Cards */}
-      <div className={s.stats}>
+      <div className="no-print" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, marginBottom: 24 }}>
         <StatCard
           label="Total Revenue"
           trend="up"
@@ -228,317 +188,392 @@ export default function DashboardOverview() {
         />
       </div>
 
-      {/* Grid Row 2: Cash Flow, Quick Actions, Health Score */}
-      <div className={s.midGrid}>
-        {/* Cash Flow */}
-        <div className={s.card}>
-          <div className={s.cardHeader}>
-            <div>
-              <h3 className={s.cardTitle}>Cash Flow Overview</h3>
-            </div>
-            <div className={s.selectors}>
-              <select className={s.selectBtn}>
-                <option>This Month</option>
-              </select>
-              <select className={s.selectBtn}>
-                <option>Weekly</option>
-              </select>
-            </div>
-          </div>
-          <div className={s.chartLegend}>
-            <span className={s.legendItem}><span className={[s.dot, s.blue].join(" ")}></span> Inflow</span>
-            <span className={s.legendItem}><span className={[s.dot, s.black].join(" ")}></span> Outflow</span>
-            <span className={s.legendItem}><span className={[s.dot, s.grey].join(" ")}></span> Net</span>
-          </div>
-          
-          <div className={s.chartWrapper}>
-            <svg className={s.chartSvg} viewBox="0 0 500 180" width="100%" height="180">
-              {/* Grid Lines */}
-              <line x1="0" y1="30" x2="500" y2="30" stroke="#f1f5f9" strokeWidth="1" />
-              <line x1="0" y1="70" x2="500" y2="70" stroke="#f1f5f9" strokeWidth="1" />
-              <line x1="0" y1="110" x2="500" y2="110" stroke="#f1f5f9" strokeWidth="1" />
-              <line x1="0" y1="150" x2="500" y2="150" stroke="#f1f5f9" strokeWidth="1" />
-
-              {/* Chart Paths */}
-              {/* Inflow - Blue Line */}
-              <path
-                d={inflowPath}
-                fill="none"
-                stroke="var(--color-accent)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              {/* Outflow - Black Line */}
-              <path
-                d={outflowPath}
-                fill="none"
-                stroke="#0f172a"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              {/* Net - Grey Dashed Line */}
-              <path
-                d={netPath}
-                fill="none"
-                stroke="#94a3b8"
-                strokeWidth="1.5"
-                strokeDasharray="4 4"
-                strokeLinecap="round"
-              />
-
-              {/* Highlight Point Indicator */}
-              <g transform={`translate(480, ${getY(netCashFlow)})`}>
-                <circle r="5" fill="var(--color-accent)" stroke="#ffffff" strokeWidth="2" />
-              </g>
-
-              {/* Text labels on X axis */}
-              <text x="20" y="175" className={s.chartText}>May 12</text>
-              <text x="130" y="175" className={s.chartText}>May 19</text>
-              <text x="245" y="175" className={s.chartText}>May 26</text>
-              <text x="360" y="175" className={s.chartText}>Jun 02</text>
-              <text x="450" y="175" className={s.chartText}>Jun 09</text>
-            </svg>
-            
-            {/* Chart Tooltip */}
-            <div className={s.chartTooltip}>
-              <span className={s.tooltipValue}>{formatCompactCurrency(netCashFlow)}</span>
-              <span className={s.tooltipDate}>Net Cash Flow</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className={s.card}>
-          <div className={s.cardHeader}>
-            <h3 className={s.cardTitle}>Quick Actions</h3>
-          </div>
-          <div className={s.quickActionsGrid}>
-            <button className={s.quickActionBtn} onClick={() => navigate("/dashboard/invoices")} type="button">
-              <span className={[s.actionIcon, s.blueBg].join(" ")}><HiOutlineDocumentText /></span>
-              <span className={s.actionText}>Create Invoice</span>
-            </button>
-            <button className={s.quickActionBtn} onClick={() => navigate("/dashboard/purchases")} type="button">
-              <span className={[s.actionIcon, s.redBg].join(" ")}><HiOutlineArrowDownOnSquare /></span>
-              <span className={s.actionText}>Add Expense</span>
-            </button>
-            <button className={s.quickActionBtn} onClick={() => navigate("/dashboard/purchase-orders")} type="button">
-              <span className={[s.actionIcon, s.purpleBg].join(" ")}><HiOutlineShoppingBag /></span>
-              <span className={s.actionText}>New Purchase</span>
-            </button>
-            <button className={s.quickActionBtn} onClick={() => navigate("/dashboard/customers/create")} type="button">
-              <span className={[s.actionIcon, s.greenBg].join(" ")}><HiOutlineUserPlus /></span>
-              <span className={s.actionText}>Add Customer</span>
-            </button>
-            <button className={s.quickActionBtn} onClick={() => navigate("/dashboard/vendors/create")} type="button">
-              <span className={[s.actionIcon, s.orangeBg].join(" ")}><HiOutlineBuildingStorefront /></span>
-              <span className={s.actionText}>Add Vendor</span>
-            </button>
-            <button className={s.quickActionBtn} onClick={() => navigate("/dashboard/accounts")} type="button">
-              <span className={[s.actionIcon, s.tealBg].join(" ")}><HiOutlineScale /></span>
-              <span className={s.actionText}>Reconcile Bank</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Health Score */}
-        <div className={s.card}>
-          <div className={s.cardHeader}>
-            <h3 className={s.cardTitle}>Your Health Score</h3>
-          </div>
-          <div className={s.healthContent}>
-            <div className={s.radialContainer}>
-              <svg width="100" height="100" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke="#f1f5f9" strokeWidth="8" fill="none" />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  stroke="var(--color-accent)"
-                  strokeWidth="8"
-                  fill="none"
-                  strokeDasharray="251.2"
-                  strokeDashoffset={251.2 * (1 - healthScore / 100)}
-                  strokeLinecap="round"
-                  transform="rotate(-90 50 50)"
-                />
-                <text x="50" y="48" textAnchor="middle" className={s.radialPercent}>{healthScore}%</text>
-                <text x="50" y="65" textAnchor="middle" className={s.radialLabel}>{healthLabel}</text>
-              </svg>
-            </div>
-            
-            <div className={s.healthMetrics}>
-              <div className={s.metricRow}>
-                <span className={[s.statusDot, healthClass].join(" ")}></span>
-                <span className={s.metricLabel}>Cash Flow</span>
-                <span className={[s.metricBadge, healthBadgeClass].join(" ")}>{healthBadge}</span>
-              </div>
-              <div className={s.metricRow}>
-                <span className={[s.statusDot, expenses > revenue ? s.redDot : s.greenDot].join(" ")}></span>
-                <span className={s.metricLabel}>Expenses</span>
-                <span className={[s.metricBadge, expenses > revenue ? s.badgeRed : s.badgeGreen].join(" ")}>
-                  {expenses > revenue ? "High" : "Optimal"}
-                </span>
-              </div>
-              <div className={s.metricRow}>
-                <span className={[s.statusDot, s.greenDot].join(" ")}></span>
-                <span className={s.metricLabel}>Receivables</span>
-                <span className={[s.metricBadge, s.badgeGreen].join(" ")}>Good</span>
-              </div>
-              <div className={s.metricRow}>
-                <span className={[s.statusDot, outstanding > revenue * 0.5 ? s.redDot : s.greenDot].join(" ")}></span>
-                <span className={s.metricLabel}>Payables</span>
-                <span className={[s.metricBadge, outstanding > revenue * 0.5 ? s.badgeRed : s.badgeGreen].join(" ")}>
-                  {outstanding > revenue * 0.5 ? "Risky" : "Good"}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className={s.healthFooter}>
-            <p className={s.healthText}>
-              {healthScore >= 70 ? "Keep it up! Your business is performing well." : "Take action to balance cash flow."}
-            </p>
-            {/* Wave decoration */}
-            <svg className={s.waveDecor} width="100%" height="16" viewBox="0 0 100 16" preserveAspectRatio="none">
-              <path d="M0,8 C25,16 25,0 50,8 C75,16 75,0 100,8 L100,16 L0,16 Z" fill="#f8fafc" />
-            </svg>
-          </div>
-        </div>
+      {/* Tabs */}
+      <div className="no-print" style={{ marginBottom: 24 }}>
+        <Tabs
+          active={tab}
+          onChange={setTab}
+          tabs={[
+            { key: "trading-pl", label: "Trading & Profit/Loss" },
+            { key: "balance-sheet", label: "Balance Sheet" },
+            { key: "ratios", label: "Business Ratios" },
+          ]}
+        />
       </div>
 
-      {/* Grid Row 3: Recent Transactions, Top Expenses, Reminders */}
-      <div className={s.bottomGrid}>
-        {/* Recent Transactions Table */}
-        <div className={s.card}>
-          <div className={s.cardHeader}>
-            <h3 className={s.cardTitle}>Recent Transactions</h3>
-            <button className={s.viewAll} onClick={() => navigate("/dashboard/audit-logs")} type="button">
-              View All <HiOutlineArrowRight />
-            </button>
+      {/* Tab Panels */}
+      <div className="no-print" style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 24 }}>
+        {tab === "trading-pl" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            {/* Trading Account */}
+            <div>
+              <h4 style={{ margin: "0 0 10px 0", borderBottom: "2px solid #e2e8f0", paddingBottom: 6, color: "#1e293b", fontSize: 14 }}>Trading Account</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+                  <span>Sales Revenue</span>
+                  <span style={{ fontWeight: 600 }}>₹{sales.toLocaleString("en-IN")}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", color: "#b91c1c" }}>
+                  <span>Less: Cost of Goods Sold (Direct Costs/Purchases)</span>
+                  <span style={{ fontWeight: 600 }}>-₹{directCosts.toLocaleString("en-IN")}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderTop: "1px solid #cbd5e1", borderBottom: "2px double #cbd5e1", fontWeight: 700 }}>
+                  <span>Gross Profit</span>
+                  <span style={{ color: grossProfit >= 0 ? "#16a34a" : "#dc2626" }}>₹{grossProfit.toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Profit & Loss Account */}
+            <div>
+              <h4 style={{ margin: "0 0 10px 0", borderBottom: "2px solid #e2e8f0", paddingBottom: 6, color: "#1e293b", fontSize: 14 }}>Profit & Loss Account</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+                  <span>Gross Profit (brought down)</span>
+                  <span style={{ fontWeight: 600 }}>₹{grossProfit.toLocaleString("en-IN")}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", color: "#b91c1c" }}>
+                  <span>Less: Operating & Indirect Expenses</span>
+                  <span style={{ fontWeight: 600 }}>-₹{operatingExpenses.toLocaleString("en-IN")}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderTop: "1px solid #cbd5e1", borderBottom: "2px double #cbd5e1", fontWeight: 700 }}>
+                  <span>Net Profit / Net Income</span>
+                  <span style={{ color: netProfit >= 0 ? "#16a34a" : "#dc2626" }}>₹{netProfit.toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className={s.tableContainer}>
-            <table className={s.table}>
+        )}
+
+        {tab === "balance-sheet" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40 }}>
+            {/* Liabilities & Equity - Swapped to Left */}
+            <div>
+              <h4 style={{ margin: "0 0 12px 0", borderBottom: "2px solid #0f172a", paddingBottom: 6, color: "#0f172a", fontSize: 14 }}>LIABILITIES & EQUITY</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <h5 style={{ margin: "8px 0 4px 0", fontWeight: 600, color: "#475569" }}>Liabilities</h5>
+                {(bs.rows || []).filter(r => r.type === "liability").map((r, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #f1f5f9" }}>
+                    <span>{r.name} ({r.code})</span>
+                    <span style={{ fontWeight: 600 }}>₹{Math.abs(r.balance).toLocaleString("en-IN")}</span>
+                  </div>
+                ))}
+
+                <h5 style={{ margin: "16px 0 4px 0", fontWeight: 600, color: "#475569" }}>Equity</h5>
+                {(bs.rows || []).filter(r => r.type === "equity").map((r, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #f1f5f9" }}>
+                    <span>{r.name} ({r.code})</span>
+                    <span style={{ fontWeight: 600 }}>₹{Math.abs(r.balance).toLocaleString("en-IN")}</span>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #f1f5f9" }}>
+                  <span>Retained Earnings (Net Income)</span>
+                  <span style={{ fontWeight: 600 }}>₹{(bs.netProfit || 0).toLocaleString("en-IN")}</span>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", marginTop: 12, borderTop: "2px solid #0f172a", fontWeight: 700, background: "#f8fafc" }}>
+                  <span style={{ paddingLeft: 8 }}>Total Liabilities & Equity</span>
+                  <span style={{ paddingRight: 8 }}>₹{((bs.liabilities || 0) + (bs.equity || 0)).toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Assets - Swapped to Right */}
+            <div>
+              <h4 style={{ margin: "0 0 12px 0", borderBottom: "2px solid #2563eb", paddingBottom: 6, color: "#2563eb", fontSize: 14 }}>ASSETS</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {(bs.rows || []).filter(r => r.type === "asset").map((r, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #f1f5f9" }}>
+                    <span>{r.name} ({r.code})</span>
+                    <span style={{ fontWeight: 600 }}>₹{r.balance.toLocaleString("en-IN")}</span>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", marginTop: 12, borderTop: "2px solid #2563eb", fontWeight: 700, background: "#eff6ff" }}>
+                  <span style={{ paddingLeft: 8 }}>Total Assets</span>
+                  <span style={{ paddingRight: 8 }}>₹{(bs.assets || 0).toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === "ratios" && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+            {[
+              { label: "Current Ratio", value: `${ratios.currentRatio || "0.00"}:1`, desc: "Optimal: >= 1.5" },
+              { label: "Quick Ratio", value: `${ratios.quickRatio || "0.00"}:1`, desc: "Optimal: >= 1.0" },
+              { label: "Debt to Equity", value: `${ratios.debtToEquity || "0.00"}:1`, desc: "Optimal: <= 1.0" },
+              { label: "Gross Profit Margin", value: `${ratios.grossProfitMargin || "0.00"}%`, desc: "Margin on sales" },
+              { label: "Net Profit Margin", value: `${ratios.netProfitMargin || "0.00"}%`, desc: "Bottom line efficiency" }
+            ].map((ratio, i) => (
+              <div key={i} style={{ background: "#f8fafc", padding: 16, borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>{ratio.label}</span>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginTop: 4 }}>{ratio.value}</div>
+                <small style={{ color: "#475569" }}>{ratio.desc}</small>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Printable Package Layout */}
+      {printData && (
+        <div className="print-only">
+          {/* Page 1: Coversheet */}
+          <div className="print-page">
+            <div style={{ textAlign: "center", marginTop: "150px" }}>
+              <h1 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a" }}>DUEVORA FINANCIAL PACKAGE</h1>
+              <h2 style={{ fontSize: 18, color: "#475569", marginTop: 10 }}>Complete Business Statements & Ledger</h2>
+              <div style={{ borderBottom: "2px solid #cbd5e1", width: "200px", margin: "30px auto" }}></div>
+              <p style={{ fontSize: 14 }}>Compiled Financial Period Report</p>
+              <p style={{ fontSize: 12, color: "#64748b", marginTop: 150 }}>Generated natively via browser print engine.</p>
+            </div>
+          </div>
+
+          {/* Page 2: Trading and P/L */}
+          <div className="print-page">
+            <div className="print-header">
+              <h2>TRADING & PROFIT & LOSS STATEMENT</h2>
+            </div>
+            <table className="print-table">
               <thead>
                 <tr>
-                  <th>TYPE</th>
-                  <th>DESCRIPTION</th>
-                  <th>STATUS</th>
-                  <th>AMOUNT</th>
-                  <th>DATE</th>
+                  <th>Particulars</th>
+                  <th style={{ textAlign: "right" }}>Amount (₹)</th>
                 </tr>
               </thead>
               <tbody>
-                {recentTransactions.map((tx) => (
-                  <tr key={tx.id}>
-                    <td>
-                      <span className={[s.typeBadge, s[`badge${tx.type}`]].join(" ")}>{tx.type}</span>
-                    </td>
-                    <td>
-                      <div className={s.txDesc}>{tx.desc}</div>
-                      <div className={s.txSub}>{tx.sub}</div>
-                    </td>
-                    <td>
-                      <span className={[s.statusBadge, tx.status === "Paid" ? s.paid : s.pending].join(" ")}>
-                        {tx.status}
-                      </span>
-                    </td>
-                    <td className={s.txAmount}>{tx.amount}</td>
-                    <td className={s.txDate}>{tx.date}</td>
+                <tr>
+                  <td>Sales Revenue</td>
+                  <td style={{ textAlign: "right" }}>₹{sales.toLocaleString("en-IN")}</td>
+                </tr>
+                <tr style={{ color: "#dc2626" }}>
+                  <td>Less: Cost of Sales / Purchases</td>
+                  <td style={{ textAlign: "right" }}>-₹{directCosts.toLocaleString("en-IN")}</td>
+                </tr>
+                <tr className="print-total">
+                  <td>Gross Profit</td>
+                  <td style={{ textAlign: "right" }}>₹{grossProfit.toLocaleString("en-IN")}</td>
+                </tr>
+                <tr>
+                  <td>Gross Profit (brought down)</td>
+                  <td style={{ textAlign: "right" }}>₹{grossProfit.toLocaleString("en-IN")}</td>
+                </tr>
+                <tr style={{ color: "#dc2626" }}>
+                  <td>Less: Operating Expenses</td>
+                  <td style={{ textAlign: "right" }}>-₹{operatingExpenses.toLocaleString("en-IN")}</td>
+                </tr>
+                <tr className="print-total" style={{ fontSize: 14 }}>
+                  <td>Net Profit</td>
+                  <td style={{ textAlign: "right" }}>₹{netProfit.toLocaleString("en-IN")}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Page 3: Balance Sheet (Swapped format) */}
+          <div className="print-page">
+            <div className="print-header">
+              <h2>BALANCE SHEET</h2>
+            </div>
+            <div style={{ display: "flex", gap: 20 }}>
+              {/* Liabilities & Equity - Swapped to Left */}
+              <div style={{ flex: 1 }}>
+                <h3>Liabilities & Equity</h3>
+                <table className="print-table">
+                  <thead>
+                    <tr>
+                      <th>Account</th>
+                      <th style={{ textAlign: "right" }}>Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td colSpan={2} style={{ fontWeight: "bold" }}>Liabilities</td>
+                    </tr>
+                    {(bs.rows || []).filter(r => r.type === "liability").map((r, i) => (
+                      <tr key={i}>
+                        <td>{r.name}</td>
+                        <td style={{ textAlign: "right" }}>₹{Math.abs(r.balance).toLocaleString("en-IN")}</td>
+                      </tr>
+                    ))}
+                    <tr>
+                      <td colSpan={2} style={{ fontWeight: "bold", paddingTop: 10 }}>Equity</td>
+                    </tr>
+                    {(bs.rows || []).filter(r => r.type === "equity").map((r, i) => (
+                      <tr key={i}>
+                        <td>{r.name}</td>
+                        <td style={{ textAlign: "right" }}>₹{Math.abs(r.balance).toLocaleString("en-IN")}</td>
+                      </tr>
+                    ))}
+                    <tr>
+                      <td>Retained Earnings (Current Net Profit)</td>
+                      <td style={{ textAlign: "right" }}>₹{(bs.netProfit || 0).toLocaleString("en-IN")}</td>
+                    </tr>
+                    <tr className="print-total">
+                      <td>Total Liabilities & Equity</td>
+                      <td style={{ textAlign: "right" }}>₹{((bs.liabilities || 0) + (bs.equity || 0)).toLocaleString("en-IN")}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Assets - Swapped to Right */}
+              <div style={{ flex: 1 }}>
+                <h3>Assets</h3>
+                <table className="print-table">
+                  <thead>
+                    <tr>
+                      <th>Account</th>
+                      <th style={{ textAlign: "right" }}>Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(bs.rows || []).filter(r => r.type === "asset").map((r, i) => (
+                      <tr key={i}>
+                        <td>{r.name}</td>
+                        <td style={{ textAlign: "right" }}>₹{r.balance.toLocaleString("en-IN")}</td>
+                      </tr>
+                    ))}
+                    <tr className="print-total">
+                      <td>Total Assets</td>
+                      <td style={{ textAlign: "right" }}>₹{(bs.assets || 0).toLocaleString("en-IN")}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Page 4: Invoices Register */}
+          <div className="print-page">
+            <div className="print-header">
+              <h2>INVOICES REGISTER</h2>
+            </div>
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Invoice #</th>
+                  <th>Customer</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: "right" }}>Total Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printData.invoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: "center" }}>No invoices recorded.</td>
+                  </tr>
+                ) : (
+                  printData.invoices.map((inv, i) => (
+                    <tr key={i}>
+                      <td>{inv.invoiceNumber}</td>
+                      <td>{inv.customerId?.name || "Customer"}</td>
+                      <td>{inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString() : "—"}</td>
+                      <td style={{ textTransform: "uppercase", fontSize: 10 }}>{inv.status}</td>
+                      <td style={{ textAlign: "right" }}>₹{inv.grandTotal?.toLocaleString("en-IN")}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Page 5: Transaction Log (Payments & Receipts) */}
+          <div className="print-page">
+            <div className="print-header">
+              <h2>TRANSACTION LOG (PAYMENTS & RECEIPTS)</h2>
+            </div>
+            <h3>Vendor Payments</h3>
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Payment #</th>
+                  <th>Vendor</th>
+                  <th>Date</th>
+                  <th>Method</th>
+                  <th style={{ textAlign: "right" }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printData.payments.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: "center" }}>No vendor payments recorded.</td>
+                  </tr>
+                ) : (
+                  printData.payments.map((p, i) => (
+                    <tr key={i}>
+                      <td>{p.paymentNumber}</td>
+                      <td>{p.vendorId?.name || "Vendor"}</td>
+                      <td>{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : "—"}</td>
+                      <td>{p.paymentMethod}</td>
+                      <td style={{ textAlign: "right" }}>₹{p.amount?.toLocaleString("en-IN")}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+
+            <h3 style={{ marginTop: 20 }}>Customer Receipts</h3>
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Receipt #</th>
+                  <th>Customer</th>
+                  <th>Date</th>
+                  <th>Method</th>
+                  <th style={{ textAlign: "right" }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printData.receipts.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: "center" }}>No customer receipts recorded.</td>
+                  </tr>
+                ) : (
+                  printData.receipts.map((r, i) => (
+                    <tr key={i}>
+                      <td>{r.receiptNumber}</td>
+                      <td>{r.customerId?.name || "Customer"}</td>
+                      <td>{r.receiptDate ? new Date(r.receiptDate).toLocaleDateString() : "—"}</td>
+                      <td>{r.paymentMethod}</td>
+                      <td style={{ textAlign: "right" }}>₹{r.amount?.toLocaleString("en-IN")}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Page 6: Chart of Accounts */}
+          <div className="print-page">
+            <div className="print-header">
+              <h2>CHART OF ACCOUNTS</h2>
+            </div>
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Account Code</th>
+                  <th>Account Name</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printData.accounts.map((acc, i) => (
+                  <tr key={i}>
+                    <td style={{ fontFamily: "monospace" }}>{acc.code}</td>
+                    <td>{acc.name}</td>
+                    <td style={{ textTransform: "capitalize" }}>{acc.type}</td>
+                    <td style={{ textTransform: "uppercase", fontSize: 10 }}>{acc.status}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
-
-        {/* Top Expenses progress bars */}
-        <div className={s.card}>
-          <div className={s.cardHeader}>
-            <h3 className={s.cardTitle}>Top Expenses</h3>
-            <select className={s.selectBtn}>
-              <option>This Month</option>
-            </select>
-          </div>
-          <div className={s.expenseList}>
-            {topExpenses.map((exp) => (
-              <div className={s.expenseItem} key={exp.name}>
-                <div className={s.expenseInfo}>
-                  <span className={s.expenseName}>{exp.name}</span>
-                  <span className={s.expensePercent}>{exp.percent}%</span>
-                </div>
-                <div className={s.progressBarBg}>
-                  <div
-                    className={s.progressBar}
-                    style={{ width: `${exp.percent}%`, backgroundColor: exp.color }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          <button className={s.fullReportBtn} onClick={() => navigate("/dashboard/reports")} type="button">
-            View full report <HiOutlineArrowRight />
-          </button>
-        </div>
-
-        {/* Upcoming Reminders */}
-        <div className={s.card}>
-          <div className={s.cardHeader}>
-            <h3 className={s.cardTitle}>Upcoming Reminders</h3>
-            <button className={s.viewAll} onClick={() => navigate("/dashboard/notifications")} type="button">
-              View All <HiOutlineArrowRight />
-            </button>
-          </div>
-          <div className={s.reminderList}>
-            {reminders.map((rem) => (
-              <div className={s.reminderItem} key={rem.title}>
-                <div className={s.reminderContent}>
-                  <div className={s.reminderBoxIcon}>
-                    <HiOutlineCalendar />
-                  </div>
-                  <div className={s.reminderText}>
-                    <div className={s.reminderTitle}>{rem.title}</div>
-                    <div className={s.reminderDate}>{rem.date}</div>
-                  </div>
-                </div>
-                <span className={[s.reminderBadge, s[rem.urgency]].join(" ")}>{rem.days}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Decorative Barcode Receipt Footer */}
-      <div className={s.barcodeContainer}>
-        <div className={s.barcodeWrapper}>
-          <svg className={s.barcodeSvg} viewBox="0 0 100 20" width="120" height="24">
-            <rect x="0" y="0" width="2" height="20" fill="#0f172a" />
-            <rect x="3" y="0" width="1" height="20" fill="#0f172a" />
-            <rect x="6" y="0" width="3" height="20" fill="#0f172a" />
-            <rect x="11" y="0" width="1" height="20" fill="#0f172a" />
-            <rect x="14" y="0" width="2" height="20" fill="#0f172a" />
-            <rect x="18" y="0" width="4" height="20" fill="#0f172a" />
-            <rect x="24" y="0" width="1" height="20" fill="#0f172a" />
-            <rect x="27" y="0" width="2" height="20" fill="#0f172a" />
-            <rect x="31" y="0" width="1" height="20" fill="#0f172a" />
-            <rect x="34" y="0" width="3" height="20" fill="#0f172a" />
-            <rect x="39" y="0" width="2" height="20" fill="#0f172a" />
-            <rect x="43" y="0" width="1" height="20" fill="#0f172a" />
-            <rect x="46" y="0" width="4" height="20" fill="#0f172a" />
-            <rect x="52" y="0" width="2" height="20" fill="#0f172a" />
-            <rect x="56" y="0" width="1" height="20" fill="#0f172a" />
-            <rect x="59" y="0" width="3" height="20" fill="#0f172a" />
-            <rect x="64" y="0" width="1" height="20" fill="#0f172a" />
-            <rect x="67" y="0" width="2" height="20" fill="#0f172a" />
-            <rect x="71" y="0" width="4" height="20" fill="#0f172a" />
-            <rect x="77" y="0" width="1" height="20" fill="#0f172a" />
-            <rect x="80" y="0" width="2" height="20" fill="#0f172a" />
-            <rect x="84" y="0" width="1" height="20" fill="#0f172a" />
-            <rect x="87" y="0" width="3" height="20" fill="#0f172a" />
-            <rect x="92" y="0" width="2" height="20" fill="#0f172a" />
-            <rect x="96" y="0" width="4" height="20" fill="#0f172a" />
-          </svg>
-          <span className={s.barcodeText}>DUEV-2026-001</span>
-        </div>
-      </div>
-    </section>
+      )}
+    </div>
   );
 }

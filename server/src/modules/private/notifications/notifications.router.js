@@ -15,7 +15,7 @@ const controller = new NotificationsController();
     @desc List notifications for the current user
     @access Private (requires notifications.view permission)
 */
-router.get("/", authMiddleware, permissionMiddleware("notifications.view"), controller.listNotifications);
+router.get("/", authMiddleware, controller.listNotifications);
 
 // exporting the router
 export default router;

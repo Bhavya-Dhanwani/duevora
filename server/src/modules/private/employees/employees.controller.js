@@ -7,6 +7,7 @@ import EmployeeDao from "../../../shared/dao/employee.dao.js";
 import DepartmentDao from "../../../shared/dao/department.dao.js";
 
 import sendMail from "../../../shared/utils/sendMail.util.js";
+import env from "../../../shared/config/env.config.js";
 
 import NotFound from "../../../shared/errors/NotFound.error.js";
 import Forbidden from "../../../shared/errors/Forbidden.error.js";
@@ -74,7 +75,7 @@ class EmployeesController {
         });
 
         // constructing the invitation link
-        const inviteUrl = `http://localhost:3000/signup?token=${token}`;
+        const inviteUrl = `${env.FRONTEND_URL}/register?token=${token}`;
 
         // sending email notification
         if (email) {

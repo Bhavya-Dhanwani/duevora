@@ -18,5 +18,7 @@ const controller = new OpeningBalancesController();
 */
 router.post("/", authMiddleware, permissionMiddleware("openingBalances.create"), createOpeningBalanceValidators, controller.createOpeningBalance);
 
+router.get("/", authMiddleware, permissionMiddleware("openingBalances.view"), controller.listOpeningBalances);
+
 // exporting the router
 export default router;

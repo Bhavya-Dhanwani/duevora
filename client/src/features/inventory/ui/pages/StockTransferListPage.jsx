@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HiPlus, HiCheck } from "react-icons/hi2";
+import { HiPlus, HiCheck, HiOutlineDocumentArrowDown } from "react-icons/hi2";
 import { inventoryApi } from "../../api/inventoryApi";
 import { Button, DataTable, Modal, PageHeader } from "../../../../app/components/common";
 import useNotification from "../../../../app/components/notification/useNotification";
+import { exportToPdf } from "../../../../lib/exportToPdf";
 
 const emptyForm = { productId: "", fromWarehouseId: "", toWarehouseId: "", quantity: "" };
 const field = { display: "block", boxSizing: "border-box", width: "100%", marginTop: 6, padding: "9px 10px", border: "1px solid #cbd5e1", borderRadius: 7 };
@@ -57,8 +58,11 @@ export default function StockTransferListPage() {
     <div style={{ maxWidth: 1100, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
         <PageHeader title="Stock Transfers" subtitle="Transfer inventory between warehouses and approve." />
-        <Button variant="primary" onClick={() => setOpen(true)}>
-          <HiPlus style={{ marginRight: 6 }} />Create transfer
+        <Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "Stock Transfers", filename: "stock_transfers", columns: [{ key: "reference", label: "Reference" }, { key: "productId", label: "Product", render: (v) => v?.name || "—" }, { key: "fromWarehouseId", label: "From", render: (v) => v?.name || "—" }, { key: "toWarehouseId", label: "To", render: (v) => v?.name || "—" }, { key: "quantity", label: "Quantity" }, { key: "status", label: "Status" }, { key: "createdAt", label: "Date", render: (v) => v ? new Date(v).toLocaleDateString("en-IN") : "—" }], data: items })}>
+          Export PDF
+        </Button>
+        <Button variant="primary" onClick={() => setOpen(true)} icon={HiPlus}>
+          Create transfer
         </Button>
       </div>
 

@@ -18,5 +18,12 @@ const controller = new CategoriesController();
 */
 router.post("/", authMiddleware, permissionMiddleware("categories.create"), createCategoryValidators, controller.createCategory);
 
+/*
+    @route GET /api/categories
+    @desc Get all categories for the current organization
+    @access Private (requires categories.view permission)
+*/
+router.get("/", authMiddleware, permissionMiddleware("categories.view"), controller.listCategories);
+
 // exporting the router
 export default router;

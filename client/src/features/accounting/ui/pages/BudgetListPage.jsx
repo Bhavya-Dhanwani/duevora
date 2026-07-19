@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HiPlus } from "react-icons/hi2";
+import { HiPlus, HiOutlineDocumentArrowDown } from "react-icons/hi2";
+import { exportToPdf } from "../../../../lib/exportToPdf";
 import { accountingApi } from "../../api/accountingApi";
 import { Button, DataTable, Modal, PageHeader, EmptyState } from "../../../../app/components/common";
 import useNotification from "../../../../app/components/notification/useNotification";
@@ -50,8 +51,11 @@ export default function BudgetListPage() {
     <div style={{ maxWidth: 1100, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
         <PageHeader title="Budgets" subtitle="Plan and track budgets for accounts." />
-        <Button variant="primary" onClick={() => setOpen(true)}>
-          <HiPlus style={{ marginRight: 6 }} />Create budget
+        <Button variant="primary" onClick={() => setOpen(true)} icon={HiPlus}>
+          Create budget
+        </Button>
+        <Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "Budgets", columns: [{key:"name",label:"Name"},{key:"amount",label:"Amount"},{key:"accountId",label:"Account",render:(v)=>v?.name||"—"},{key:"startDate",label:"Start",render:(v)=>v?new Date(v).toLocaleDateString("en-IN"):"—"},{key:"endDate",label:"End",render:(v)=>v?new Date(v).toLocaleDateString("en-IN"):"—"}], data: items, filename: "budgets" })}>
+          Export PDF
         </Button>
       </div>
 

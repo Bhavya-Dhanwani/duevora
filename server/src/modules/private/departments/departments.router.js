@@ -18,5 +18,12 @@ const controller = new DepartmentsController();
 */
 router.post("/", authMiddleware, permissionMiddleware("departments.create"), createDepartmentValidators, controller.createDepartment);
 
+/*
+    @route GET /api/departments
+    @desc Get all departments for the current organization
+    @access Private (requires departments.view permission)
+*/
+router.get("/", authMiddleware, permissionMiddleware("departments.view"), controller.listDepartments);
+
 // exporting the router
 export default router;

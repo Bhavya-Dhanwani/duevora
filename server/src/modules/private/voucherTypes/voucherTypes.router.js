@@ -18,5 +18,7 @@ const controller = new VoucherTypesController();
 */
 router.post("/", authMiddleware, permissionMiddleware("voucherTypes.create"), createVoucherTypeValidators, controller.createVoucherType);
 
+router.get("/", authMiddleware, permissionMiddleware("voucherTypes.view"), controller.listVoucherTypes);
+
 // exporting the router
 export default router;

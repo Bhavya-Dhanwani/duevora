@@ -1,7 +1,9 @@
 ﻿import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { auditLogsApi } from "../../api/auditLogsApi";
-import { DataTable, PageHeader, StatusBadge } from "../../../../app/components/common";
+import { DataTable, PageHeader, StatusBadge, Button } from "../../../../app/components/common";
+import { exportToPdf } from "../../../../lib/exportToPdf";
+import { HiOutlineDocumentArrowDown } from "react-icons/hi2";
 
 export default function AuditLogListPage() {
   const navigate = useNavigate();
@@ -41,7 +43,12 @@ export default function AuditLogListPage() {
 
   return (
     <div style={{ maxWidth: 1300, margin: "0 auto" }}>
-      <PageHeader title="Audit Trail" subtitle="Review who changed what and when across the organization." />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <PageHeader title="Audit Trail" subtitle="Review who changed what and when across the organization." />
+        <Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "Audit Trail", filename: "audit-logs", columns: [{ key: "createdAt", label: "When", render: (v) => v ? new Date(v).toLocaleString("en-IN") : "—" }, { key: "user", label: "Actor", render: (v) => v?.name || v?.email || "System" }, { key: "action", label: "Action", render: (v) => (v || "—").toUpperCase() }, { key: "resourceType", label: "Resource" }, { key: "description", label: "Details" }, { key: "ipAddress", label: "IP" }], data: query.data?.data || [] })}>
+          Export PDF
+        </Button>
+      </div>
       <DataTable
         loading={query.isLoading}
         data={query.data?.data || []}

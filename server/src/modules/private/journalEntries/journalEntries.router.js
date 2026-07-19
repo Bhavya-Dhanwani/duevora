@@ -18,5 +18,7 @@ const controller = new JournalEntriesController();
 */
 router.post("/", authMiddleware, permissionMiddleware("journalEntries.create"), createJournalEntryValidators, controller.createJournalEntry);
 
+router.get("/", authMiddleware, permissionMiddleware("journalEntries.view"), controller.listJournalEntries);
+
 // exporting the router
 export default router;

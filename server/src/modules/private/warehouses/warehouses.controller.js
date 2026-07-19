@@ -4,6 +4,7 @@ import WarehouseDao from "../../../shared/dao/warehouse.dao.js";
 import Conflict from "../../../shared/errors/Conflict.error.js";
 
 import Created from "../../../shared/responses/Created.response.js";
+import Ok from "../../../shared/responses/Ok.response.js";
 
 // class to handle warehouse operations
 class WarehousesController {
@@ -44,6 +45,19 @@ class WarehousesController {
 
         // returning the created warehouse
         return Created(res, "Warehouse created successfully", warehouse);
+
+    }
+
+    // list warehouses in the current organization
+    listWarehouses = async (req, res) => {
+
+        const organizationId = req.user.organizationId;
+
+        // finding warehouses in the current organization using warehouse dao
+        const warehouses = await this.warehouseDao.find({ organizationId });
+
+        // returning the list of warehouses
+        return Ok(res, "Warehouses retrieved successfully", warehouses);
 
     }
 

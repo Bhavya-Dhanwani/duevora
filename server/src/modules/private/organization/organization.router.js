@@ -23,7 +23,7 @@ router.post("/", authMiddleware, onboardValidators, orgController.onboard);
     @desc Get organization details
     @access Private (Authenticated and Authorized)
 */
-router.get("/", authMiddleware, permissionMiddleware("organization.view"), orgController.getDetails);
+router.get("/", authMiddleware, orgController.getDetails);
 
 // exporting the router
 export default router;

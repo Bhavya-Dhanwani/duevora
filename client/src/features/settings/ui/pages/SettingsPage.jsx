@@ -171,8 +171,7 @@ export default function SettingsPage() {
                 <p style={{ margin: "0 0 18px", color: "#64748b", lineHeight: 1.5 }}>
                   Create organization roles and grant or revoke permissions from the role matrix.
                 </p>
-                <Button variant="primary" onClick={() => navigate("/dashboard/users?tab=roles")}>
-                  <HiOutlineUserGroup style={{ marginRight: 6 }} />
+                <Button variant="primary" onClick={() => navigate("/dashboard/users?tab=roles")} icon={HiOutlineUserGroup}>
                   Manage roles & permissions
                 </Button>
               </div>
@@ -184,8 +183,8 @@ export default function SettingsPage() {
       {activeTab === "financial-years" && (
         <div style={{ marginTop: 20 }}>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-            <Button variant="primary" onClick={() => setIsFYOpen(true)}>
-              <HiOutlinePlus style={{ marginRight: 6 }} /> New Financial Year
+            <Button variant="primary" onClick={() => setIsFYOpen(true)} icon={HiOutlinePlus}>
+              New Financial Year
             </Button>
           </div>
           <DataTable
@@ -206,8 +205,8 @@ export default function SettingsPage() {
       {activeTab === "currencies" && (
         <div style={{ marginTop: 20 }}>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-            <Button variant="primary" onClick={() => setIsCurrencyOpen(true)}>
-              <HiOutlinePlus style={{ marginRight: 6 }} /> Add Currency
+            <Button variant="primary" onClick={() => setIsCurrencyOpen(true)} icon={HiOutlinePlus}>
+              Add Currency
             </Button>
           </div>
           <DataTable

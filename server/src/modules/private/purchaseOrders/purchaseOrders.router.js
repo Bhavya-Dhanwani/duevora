@@ -18,5 +18,12 @@ const controller = new PurchaseOrdersController();
 */
 router.post("/", authMiddleware, permissionMiddleware("purchaseOrders.create"), createPurchaseOrderValidators, controller.createPurchaseOrder);
 
+/*
+    @route GET /api/purchase-orders
+    @desc Get all purchase orders for the current organization
+    @access Private (requires purchaseOrders.view permission)
+*/
+router.get("/", authMiddleware, permissionMiddleware("purchaseOrders.view"), controller.listPurchaseOrders);
+
 // exporting the router
 export default router;

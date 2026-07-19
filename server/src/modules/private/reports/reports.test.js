@@ -86,4 +86,17 @@ describe("Reports Integration Tests", () => {
             expect(res.body.data.netCashFlow).toBeDefined();
         });
     });
+
+    describe("GET /api/reports/ratios", () => {
+        it("should successfully retrieve calculated business ratios", async () => {
+            const res = await request(app).get("/api/reports/ratios").set("Authorization", `Bearer ${adminUserToken}`);
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.currentRatio).toBeDefined();
+            expect(res.body.data.quickRatio).toBeDefined();
+            expect(res.body.data.grossProfitMargin).toBeDefined();
+            expect(res.body.data.netProfitMargin).toBeDefined();
+            expect(res.body.data.debtToEquity).toBeDefined();
+        });
+    });
 });

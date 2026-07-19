@@ -80,7 +80,7 @@ export default function StatCard({ label, value, trend, trendLabel }) {
           </div>
         ) : (
           <div className={s.trendMuted}>
-            <span className={s.redDot}>●</span> 8 invoices pending
+            <span className={s.redDot}>●</span> {trendLabel || "No trend data"}
           </div>
         )}
       </div>

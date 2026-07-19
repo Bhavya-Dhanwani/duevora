@@ -20,4 +20,9 @@ export const reportsApi = {
     const response = await api.get("/reports/cash-flow", { params });
     return response.data;
   },
+
+  ratios: async (params) => {
+    const response = await api.get("/reports/ratios", { params });
+    return response.data;
+  },
 };

@@ -146,7 +146,7 @@ class AuthController {
     login = async (req, res) => {
 
         // getting the user from the request body
-        const { email, password } = req.body;
+        const { email, password, token } = req.body;
 
         // finding the user using the user dao
         const user = await this.userDao.findUserByEmail(email);
@@ -165,6 +165,71 @@ class AuthController {
         if (!isPasswordValid) {
 
             throw new Unauthorized("Invalid email or password");
+
+        }
+
+        let tokenDoc = null;
+        if (token) {
+
+            // finding the invitation token in the database
+            tokenDoc = await this.tokenDao.findTokenByValue(token);
+
+            if (!tokenDoc || tokenDoc.type !== "invitation") {
+
+                throw new BadRequest("Invalid or expired invitation token.");
+
+            }
+
+            if (tokenDoc.email && tokenDoc.email.toLowerCase() !== email.toLowerCase()) {
+
+                throw new BadRequest("Email does not match invitation.");
+
+            }
+
+        }
+
+        if (tokenDoc) {
+
+            const employeeDao = new EmployeeDao();
+            const employeeRoleDao = new EmployeeRoleDao();
+
+            // checking if user already has an employee profile for this organization
+            let employee = await employeeDao.findOne({ userId: user._id, organizationId: tokenDoc.organizationId });
+
+            if (!employee) {
+
+                const existingEmployees = await employeeDao.find({ organizationId: tokenDoc.organizationId });
+                const count = existingEmployees.length;
+
+                const nameParts = user.name.trim().split(/\s+/);
+                const firstName = nameParts[0];
+                const lastName = nameParts.slice(1).join(" ") || firstName;
+
+                employee = await employeeDao.create({
+                    userId: user._id,
+                    organizationId: tokenDoc.organizationId,
+                    employeeCode: `EMP-${count + 1}`,
+                    firstName,
+                    lastName,
+                    email: user.email,
+                    status: "active"
+                });
+
+            }
+
+            // assigning role to employee if not already assigned
+            const existingRole = await employeeRoleDao.findOne({ employeeId: employee._id, roleId: tokenDoc.roleId });
+            if (!existingRole) {
+
+                await employeeRoleDao.create({
+                    employeeId: employee._id,
+                    roleId: tokenDoc.roleId
+                });
+
+            }
+
+            // deleting the invitation token
+            await this.tokenDao.deleteTokenByValue(token);
 
         }
 

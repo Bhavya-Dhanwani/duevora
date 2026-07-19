@@ -110,13 +110,96 @@ class ReportsController {
             { $project: { accountId: "$_id", name: "$account.name", code: "$account.code", type: "$account.type", balance: { $subtract: ["$totalDebit", "$totalCredit"] }, _id: 0 } }
         ]);
 
+        // calculating current period Net Profit to correctly balance the Balance Sheet
+        const plRows = await this.ledgerEntryDao.Model.aggregate([
+            { $match: { organizationId } },
+            { $lookup: { from: "accounts", localField: "accountId", foreignField: "_id", as: "account" } },
+            { $unwind: "$account" },
+            { $match: { "account.type": { $in: ["revenue", "expense"] } } },
+            { $group: { _id: "$account.type", totalDebit: { $sum: "$debit" }, totalCredit: { $sum: "$credit" } } }
+        ]);
+
+        const revenue = plRows.filter(r => r._id === "revenue").reduce((s, r) => s + (r.totalCredit - r.totalDebit), 0);
+        const expenses = plRows.filter(r => r._id === "expense").reduce((s, r) => s + (r.totalDebit - r.totalCredit), 0);
+        const netProfit = revenue - expenses;
+
         // computing section totals for balance sheet
         const assets = rows.filter(r => r.type === "asset").reduce((s, r) => s + r.balance, 0);
         const liabilities = rows.filter(r => r.type === "liability").reduce((s, r) => s + Math.abs(r.balance), 0);
-        const equity = rows.filter(r => r.type === "equity").reduce((s, r) => s + Math.abs(r.balance), 0);
+        const equityOriginal = rows.filter(r => r.type === "equity").reduce((s, r) => s + Math.abs(r.balance), 0);
+        
+        // adding Net Profit / Retained Earnings to the equity section so Assets = Liabilities + Equity
+        const equity = equityOriginal + netProfit;
 
         // returning the balance sheet report
-        return Ok(res, "Balance sheet retrieved successfully", { rows, assets, liabilities, equity });
+        return Ok(res, "Balance sheet retrieved successfully", { rows, assets, liabilities, equity, netProfit });
+
+    }
+
+    // retrieve business ratios report
+    businessRatios = async (req, res) => {
+
+        const organizationId = new mongoose.Types.ObjectId(req.user.organizationId);
+
+        // aggregating account balances for ratios
+        const rows = await this.ledgerEntryDao.Model.aggregate([
+            { $match: { organizationId } },
+            { $group: { _id: "$accountId", totalDebit: { $sum: "$debit" }, totalCredit: { $sum: "$credit" } } },
+            { $lookup: { from: "accounts", localField: "_id", foreignField: "_id", as: "account" } },
+            { $unwind: "$account" },
+            { $project: { accountId: "$_id", name: "$account.name", code: "$account.code", type: "$account.type", balance: { $subtract: ["$totalDebit", "$totalCredit"] }, _id: 0 } }
+        ]);
+
+        // calculating current period Net Profit
+        const plRows = await this.ledgerEntryDao.Model.aggregate([
+            { $match: { organizationId } },
+            { $lookup: { from: "accounts", localField: "accountId", foreignField: "_id", as: "account" } },
+            { $unwind: "$account" },
+            { $match: { "account.type": { $in: ["revenue", "expense"] } } },
+            { $group: { _id: "$account.type", totalDebit: { $sum: "$debit" }, totalCredit: { $sum: "$credit" } } }
+        ]);
+
+        const revenue = plRows.filter(r => r._id === "revenue").reduce((s, r) => s + (r.totalCredit - r.totalDebit), 0);
+        const expenses = plRows.filter(r => r._id === "expense").reduce((s, r) => s + (r.totalDebit - r.totalCredit), 0);
+        const netProfit = revenue - expenses;
+
+        const assets = rows.filter(r => r.type === "asset").reduce((s, r) => s + r.balance, 0);
+        const liabilities = rows.filter(r => r.type === "liability").reduce((s, r) => s + Math.abs(r.balance), 0);
+        const equityOriginal = rows.filter(r => r.type === "equity").reduce((s, r) => s + Math.abs(r.balance), 0);
+        const equity = equityOriginal + netProfit;
+
+        // Quick Assets: Cash, Bank, and Receivables (Assets excluding Inventory)
+        const quickAssets = rows
+            .filter(r => r.type === "asset" && !r.code.toUpperCase().includes("INVENTORY") && !r.name.toUpperCase().includes("INVENTORY"))
+            .reduce((s, r) => s + r.balance, 0);
+
+        // Direct Costs/COGS/Purchases
+        const directCosts = rows
+            .filter(r => r.type === "expense" && (r.code.toUpperCase().includes("PURCH") || r.code.toUpperCase().includes("COGS") || r.name.toUpperCase().includes("DIRECT")))
+            .reduce((s, r) => s + r.balance, 0);
+        const grossProfit = revenue - directCosts;
+
+        // Computing business ratios
+        const currentRatio = liabilities > 0 ? Number((assets / liabilities).toFixed(2)) : assets > 0 ? 99.9 : 0;
+        const quickRatio = liabilities > 0 ? Number((quickAssets / liabilities).toFixed(2)) : quickAssets > 0 ? 99.9 : 0;
+        const grossProfitMargin = revenue > 0 ? Number(((grossProfit / revenue) * 100).toFixed(2)) : 0;
+        const netProfitMargin = revenue > 0 ? Number(((netProfit / revenue) * 100).toFixed(2)) : 0;
+        const debtToEquity = equity > 0 ? Number((liabilities / equity).toFixed(2)) : liabilities > 0 ? 99.9 : 0;
+
+        return Ok(res, "Business ratios retrieved successfully", {
+            currentRatio,
+            quickRatio,
+            grossProfitMargin,
+            netProfitMargin,
+            debtToEquity,
+            assets,
+            liabilities,
+            equity,
+            revenue,
+            netProfit,
+            grossProfit,
+            directCosts
+        });
 
     }
 

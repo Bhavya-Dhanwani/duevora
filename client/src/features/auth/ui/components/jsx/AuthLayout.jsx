@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import BackgroundGrid from "./BackgroundGrid";
 import BlueprintDecorations from "./BlueprintDecorations";
 import InvoiceHeader from "./InvoiceHeader";
@@ -17,19 +17,28 @@ export default function AuthLayout({ initialMode = "login" }) {
   const navigate = useNavigate();
   const { login, signup } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token") || undefined;
 
-  const switchToLogin = () => navigate("/login");
-  const switchToSignup = () => navigate("/register");
+  const switchToLogin = () => {
+    const tokenQuery = token ? `?token=${token}` : "";
+    navigate(`/login${tokenQuery}`);
+  };
+
+  const switchToSignup = () => {
+    const tokenQuery = token ? `?token=${token}` : "";
+    navigate(`/register${tokenQuery}`);
+  };
 
   const handleLogin = async (data) => {
     setIsLoading(true);
-    await login(data);
+    await login({ ...data, token });
     setIsLoading(false);
   };
 
   const handleSignup = async (data) => {
     setIsLoading(true);
-    await signup(data);
+    await signup({ ...data, token });
     setIsLoading(false);
   };
 

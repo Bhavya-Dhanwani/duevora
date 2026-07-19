@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { HiOutlineDocumentArrowDown } from "react-icons/hi2";
 import { accountingApi } from "../../api/accountingApi";
-import { DataTable, PageHeader, EmptyState } from "../../../../app/components/common";
+import { Button, DataTable, PageHeader, EmptyState } from "../../../../app/components/common";
+import { exportToPdf } from "../../../../lib/exportToPdf";
 
 export default function LedgerViewPage() {
   const [accountId, setAccountId] = useState("");
@@ -30,6 +32,9 @@ export default function LedgerViewPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
         <PageHeader title="General Ledger" subtitle="View all ledger transactions" />
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <Button variant="secondary" icon={HiOutlineDocumentArrowDown} onClick={() => exportToPdf({ title: "General Ledger", columns: [{key:"date",label:"Date",render:(v)=>v?new Date(v).toLocaleDateString("en-IN"):"—"},{key:"accountId",label:"Account",render:(v)=>v?.name||"—"},{key:"journalEntryId",label:"Journal Entry",render:(v)=>v?.entryNumber||"—"},{key:"debit",label:"Debit",render:(v)=>v?`₹${Number(v).toLocaleString("en-IN",{minimumFractionDigits:2})}`:"—"},{key:"credit",label:"Credit",render:(v)=>v?`₹${Number(v).toLocaleString("en-IN",{minimumFractionDigits:2})}`:"—"}], data: rows, filename: "general-ledger" })}>
+            Export PDF
+          </Button>
           <select
             value={accountId}
             onChange={(e) => setAccountId(e.target.value)}
