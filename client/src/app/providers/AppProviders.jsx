@@ -10,7 +10,10 @@ export default function AppProviders({ children }) {
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <NotificationProvider>
-          {children}
+          
+        
+            {children}
+          
         </NotificationProvider>
       </QueryClientProvider>
     </Provider>
