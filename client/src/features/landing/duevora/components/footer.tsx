@@ -37,7 +37,7 @@ export default function Footer() {
 						/>
 
 						<h1 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[60px] uppercase leading-none font-humaneMedium text-black">
-							AI
+							DUEVORA
 						</h1>
 					</div>
 				</div>
@@ -62,24 +62,24 @@ export default function Footer() {
 
 				<div className="flex items-center gap-10">
 					<a
-						href="/"
+						
 						className="text-[18px] uppercase font-helveticaNeue text-white hover:text-white/70 transition-colors"
 					>
-						Privacy
+						THANKYOU
 					</a>
 
 					<a
-						href="/"
+						
 						className="text-[18px] uppercase font-helveticaNeue text-white hover:text-white/70 transition-colors"
 					>
-						Terms
+						NAMASTE
 					</a>
 
 					<a
-						href="/"
+						
 						className="text-[18px] uppercase font-helveticaNeue text-white hover:text-white/70 transition-colors"
 					>
-						Contact
+						DEV
 					</a>
 				</div>
 			</div>

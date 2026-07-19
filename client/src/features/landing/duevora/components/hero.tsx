@@ -45,21 +45,21 @@ export default function Hero({
 
 			<Eye />
 
-			<div className="absolute bottom-5 text-center left-1/2 -translate-x-1/2">
-				<h1 className="text-[18px] font-helveticaNeue leading-tight text-white uppercase">
-					AI-powered finance assistant for{" "}
-					<span className="text-[24px] font-bodoniseventytwo leading-tight lowercase">
-						MSMEs
-					</span>
-					.
-					<br />
-					Speak payments, scan bills, and{" "}
-					<span className="text-[24px] font-bodoniseventytwo leading-tight lowercase">
-						automate
-					</span>{" "}
-					your bookkeeping.
-				</h1>
-			</div>
+<div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-center">
+	<h1 className="text-[18px] font-helveticaNeue leading-tight text-white uppercase">
+		The complete business operating system for{" "}
+		<span className="text-[24px] font-bodoniseventytwo leading-tight lowercase">
+			MSMEs
+		</span>
+		.
+		<br />
+		Manage inventory, sales, purchases, and{" "}
+		<span className="text-[24px] font-bodoniseventytwo leading-tight lowercase">
+			grow
+		</span>{" "}
+		your business.
+	</h1>
+</div>
 
 			<div className="absolute -top-20 -right-20">
 				<motion.img

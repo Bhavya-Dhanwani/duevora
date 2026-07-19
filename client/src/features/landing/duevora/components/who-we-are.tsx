@@ -53,12 +53,11 @@ export default function WhoWeAre() {
 						</div>
 						<div className="w-full flex justify-end items-end">
 							<motion.p className="w-1/2 leading-tight text-lg uppercase font-helveticaNeue text-[#1c1c1c]">
-								Duevora is an AI-powered finance assistant built
-for modern businesses. Simply speak a payment,
-upload a receipt, or add an invoice and let AI
-organize everything automatically.
-
-							</motion.p>
+	Duevora is an all-in-one business management platform
+	built for modern MSMEs. Manage inventory, sales,
+	purchases, employees, and finances from a single,
+	intuitive workspace designed to help your business grow.
+</motion.p>
 						</div>
 					</div>
 					<div
@@ -98,7 +97,7 @@ organize everything automatically.
 									className="w-[250px] h-[250px]"
 								/>
 								<h1 className="text-[50px] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 uppercase leading-tight font-humaneMedium text-black">
-									AI
+									DUE
 								</h1>
 							</div>
 						</div>
@@ -129,22 +128,22 @@ organize everything automatically.
 							<div className="w-full flex flex-col items-center justify-center overflow-hidden">
 								<AnimatedText
     className="text-[white] leading-[0.85] text-[200px] overflow-hidden"
-    text="Speak Naturally"
+   text="Manage Inventory"
 />
 
 <AnimatedText
     className="text-[white] leading-[0.85] text-[200px] overflow-hidden"
-    text="Upload Bills"
+   	text="Track Sales"
 />
 
 <AnimatedText
     className="text-[#1c1c1c] leading-[0.85] text-[200px] overflow-hidden"
-    text="AI Organizes Everything"
+    text="Simplify Operations"
 />
 
 <AnimatedText
     className="text-[#1c1c1c] leading-[0.85] text-[200px] overflow-hidden"
-    text="Track Every Payment"
+   text="Scale Your Business"
 />
 							</div>
 						</div>

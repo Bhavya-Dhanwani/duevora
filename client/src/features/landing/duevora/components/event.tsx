@@ -34,18 +34,20 @@ export default function Workflow({
 				</span>
 
 				<h1 className="text-[22px] font-helveticaNeue leading-[0.9] text-white uppercase text-right">
-					Turn every payment into an
-					<br />
-					<span className="text-[32px] font-bodoniseventytwo lowercase">
-						organized
-					</span>{" "}
-					financial record
-					<br />
-					with AI-powered{" "}
-					<span className="text-[32px] font-bodoniseventytwo lowercase">
-						automation.
-					</span>
-				</h1>
+	Streamline every business
+	<br />
+	with{" "}
+	<span className="text-[32px] font-bodoniseventytwo lowercase">
+		smart
+	</span>{" "}
+	workflows
+	<br />
+	and{" "}
+	<span className="text-[32px] font-bodoniseventytwo lowercase">
+		complete
+	</span>{" "}
+	control.
+</h1>
 			</div>
 
 			<Slider />
