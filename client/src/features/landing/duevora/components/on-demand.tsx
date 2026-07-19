@@ -21,24 +21,24 @@ export default function ProductShowcase({
 
 					<div className="flex flex-col gap-2 items-center justify-center overflow-hidden text-center">
 						<AnimatedText
-							className="text-white leading-[0.85] text-[120px]"
-							text="Speak a payment, upload a receipt,"
-						/>
+	className="text-white leading-[0.85] text-[120px]"
+	text="Manage inventory with confidence."
+/>
 
-						<AnimatedText
-							className="text-white leading-[0.85] text-[120px]"
-							text="or create an invoice in seconds."
-						/>
+<AnimatedText
+	className="text-white leading-[0.85] text-[120px]"
+	text="Streamline sales and purchases."
+/>
 
-						<AnimatedText
-							className="text-white leading-[0.85] text-[120px]"
-							text="Our AI organizes every transaction,"
-						/>
+<AnimatedText
+	className="text-white leading-[0.85] text-[120px]"
+	text="Track finances and business performance."
+/>
 
-						<AnimatedText
-							className="text-white leading-[0.85] text-[120px]"
-							text="so you can focus on growing your business."
-						/>
+<AnimatedText
+	className="text-white leading-[0.85] text-[120px]"
+	text="Everything your business needs in one platform."
+/>
 					</div>
 				</div>
 			</div>
