@@ -1,0 +1,10 @@
+.page { max-width: 1200px; margin: 0 auto; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 24px; }
+.cardTitle { font-size: 16px; font-weight: 700; color: var(--color-primary); margin: 0 0 16px; padding-bottom: 12px; border-bottom: 1px solid var(--color-border); }
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.label { font-size: 12px; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+.value { font-size: 14px; color: var(--color-text); }
+.notes { font-size: 14px; color: var(--color-text-secondary); line-height: 1.6; margin: 0; }
+@media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }

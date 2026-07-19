@@ -1,0 +1,40 @@
+.page {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.vendorCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vendorName {
+  font-weight: 600;
+  color: var(--color-primary);
+  font-size: 14px;
+}
+
+.vendorEmail {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.moreBtn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 18px;
+  transition: all var(--transition-fast);
+}
+
+.moreBtn:hover {
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
