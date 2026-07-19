@@ -32,7 +32,11 @@ function applyMiddlewares(app) {
 
     app.use(cookieParser()); // to parse Cookie header and populate req.cookies with an object keyed by the cookie names
 
-    app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev")); // to log HTTP requests and errors
+    // Production application logs are emitted by Pino as structured JSON.
+    // Morgan remains a development aid because its text format is not JSON.
+    if (env.NODE_ENV !== "production") {
+        app.use(morgan("dev"));
+    }
 
     app.use(express.json({ limit: "100kb" })); // to parse incoming requests with JSON payloads and is based on body-parser
 

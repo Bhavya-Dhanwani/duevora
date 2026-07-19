@@ -7,14 +7,16 @@ const REQUEST_TIMEOUT_MS = 10000;
 
 class RazorpayService {
 
-    constructor(fetchImplementation = globalThis.fetch) {
+    constructor(fetchImplementation = globalThis.fetch, loggerInstance = logger) {
         this.fetch = fetchImplementation;
+        this.logger = loggerInstance;
     }
 
     createPaymentLink = async (payload) => {
         return await this.request("/payment_links", {
             method: "POST",
             body: payload,
+            operation: "create_payment_link",
             frontendMessage: "Unable to create payment link at this time.",
         });
     };
@@ -22,6 +24,7 @@ class RazorpayService {
     fetchPaymentLink = async (providerPaymentLinkId) => {
         return await this.request(`/payment_links/${encodeURIComponent(providerPaymentLinkId)}`, {
             method: "GET",
+            operation: "fetch_payment_link",
             frontendMessage: "Unable to retrieve payment link at this time.",
         });
     };
@@ -29,11 +32,12 @@ class RazorpayService {
     cancelPaymentLink = async (providerPaymentLinkId) => {
         return await this.request(`/payment_links/${encodeURIComponent(providerPaymentLinkId)}/cancel`, {
             method: "POST",
+            operation: "cancel_payment_link",
             frontendMessage: "Unable to cancel payment link at this time.",
         });
     };
 
-    request = async (path, { method, body, frontendMessage }) => {
+    request = async (path, { method, body, operation, frontendMessage }) => {
         if (!env.RAZORPAY_ENABLED) {
             throw new ServiceUnavailable("Razorpay payment links are not enabled.");
         }
@@ -74,9 +78,9 @@ class RazorpayService {
                     ? responseBody.error.code.slice(0, 80)
                     : undefined;
 
-                logger.warn({
+                this.logger.warn({
                     provider: "razorpay",
-                    operation: `${method} ${path.split("/").filter(Boolean).at(-1) || "payment_links"}`,
+                    operation,
                     providerStatus: response.status,
                     providerCode,
                 }, "Razorpay request failed");
@@ -98,9 +102,9 @@ class RazorpayService {
                 throw error;
             }
 
-            logger.warn({
+            this.logger.warn({
                 provider: "razorpay",
-                operation: method,
+                operation,
                 errorName: error.name,
             }, "Razorpay network request failed");
 
