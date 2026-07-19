@@ -142,7 +142,7 @@ Instead of juggling multiple tools, Duevora provides one unified platform for ma
 
 <p align="center">
 
-<img src="./docs/screenshots/landing.png" width="100%"/>
+<img src="https://placehold.co/1200x600/0F172A/FFFFFF?text=Duevora+Landing+Page" width="100%"/>
 
 </p>
 
@@ -152,7 +152,7 @@ Instead of juggling multiple tools, Duevora provides one unified platform for ma
 
 <p align="center">
 
-<img src="./docs/screenshots/dashboard.png" width="100%"/>
+<img src="https://placehold.co/1200x600/0F172A/FFFFFF?text=Dashboard+Overview" width="100%"/>
 
 </p>
 
@@ -162,7 +162,7 @@ Instead of juggling multiple tools, Duevora provides one unified platform for ma
 
 <p align="center">
 
-<img src="./docs/screenshots/inventory.png" width="100%"/>
+<img src="https://placehold.co/1200x600/0F172A/FFFFFF?text=Inventory+Management" width="100%"/>
 
 </p>
 
@@ -172,7 +172,7 @@ Instead of juggling multiple tools, Duevora provides one unified platform for ma
 
 <p align="center">
 
-<img src="./docs/screenshots/sales.png" width="100%"/>
+<img src="https://placehold.co/1200x600/0F172A/FFFFFF?text=Sales+Module" width="100%"/>
 
 </p>
 
@@ -182,7 +182,7 @@ Instead of juggling multiple tools, Duevora provides one unified platform for ma
 
 <p align="center">
 
-<img src="./docs/screenshots/employees.png" width="100%"/>
+<img src="https://placehold.co/1200x600/0F172A/FFFFFF?text=Employee+Management" width="100%"/>
 
 </p>
 
@@ -194,7 +194,7 @@ Instead of juggling multiple tools, Duevora provides one unified platform for ma
 
 > 🎬 Add your GIF here
 
-<img src="./docs/demo/demo.gif"/>
+<img src="https://placehold.co/800x450/0F172A/FFFFFF?text=Duevora+Demo+GIF"/>
 
 </p>
 
